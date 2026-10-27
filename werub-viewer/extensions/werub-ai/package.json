@@ -1,0 +1,13 @@
+{
+  "name": "@ohif/extension-werub-ai",
+  "version": "1.0.0",
+  "description": "WeRU.B AI Analysis Panel Extension",
+  "license": "MIT",
+  "main": "src/index.ts",
+  "module": "src/index.ts",
+  "engines": { "node": ">=14" },
+  "peerDependencies": {
+    "@ohif/ui-next": "3.12.0",
+    "react": "18.3.1"
+  }
+}

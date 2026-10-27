@@ -1,0 +1,14 @@
+{
+  "name": "openpacs-e2e",
+  "private": true,
+  "description": "WeRU.B PACS 클라이언트 E2E 클릭스루 (docs/client-e2e-checklist-20260609.md 자동화)",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0",
+    "adm-zip": "^0.5.17"
+  }
+}

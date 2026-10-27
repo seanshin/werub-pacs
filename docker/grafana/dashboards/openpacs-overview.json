@@ -1,0 +1,33 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "openpacs-overview",
+    "title": "OpenPACS Overview",
+    "tags": ["openpacs"],
+    "timezone": "Asia/Seoul",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Services Status",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 24, "x": 0, "y": 0 },
+        "targets": [
+          {
+            "expr": "up",
+            "legendFormat": "{{job}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [
+              { "type": "value", "options": { "0": { "text": "DOWN", "color": "red" }, "1": { "text": "UP", "color": "green" } } }
+            ]
+          }
+        }
+      }
+    ],
+    "refresh": "30s",
+    "schemaVersion": 39,
+    "version": 1
+  }
+}

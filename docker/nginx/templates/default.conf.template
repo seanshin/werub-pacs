@@ -1,0 +1,137 @@
+# WeRU.B PACS — reverse proxy (canonical install).
+# nginx image envsubst's this template at startup; only ${ORTHANC_BASIC_AUTH}
+# is substituted from env (nginx runtime vars like $host are left untouched).
+# Routes match the product URL scheme: /pacs-api /pacs-admin /werub-viewer
+# /dicom-web /wado /pacs.
+
+upstream api_backend     { server backend:8000; }
+upstream orthanc_backend { server orthanc:8042; }
+upstream admin_app       { server admin:3002; }
+upstream werub_viewer    { server werub:80; }
+
+# P1: /dicom-web 토큰 게이트의 auth_request 결과 캐시(토큰당 짧게) — per-frame 백엔드 인증
+# 히트를 토큰당 1/분으로 축소 + 로그아웃 폐기창 상한(≤60s).
+proxy_cache_path /var/cache/nginx/dwauth levels=1:2 keys_zone=dwauth:5m
+                 max_size=64m inactive=2m use_temp_path=off;
+
+# PHI 로그 위생 (arch-invariants INV-TEL-01 후속): 기본 combined 포맷은 요청줄 전체
+# ($request = 쿼리스트링 포함)를 남겨 QIDO PatientID/PatientName·API patient_id 쿼리가
+# access log에 평문 잔류한다. $uri(쿼리 제거)로 대체. 한계: 경로 세그먼트에 실리는
+# MRN(/patients/{id}/…)은 남음 — 로그 접근권한/보존으로 관리.
+log_format nophi '$remote_addr - $remote_user [$time_local] '
+                 '"$request_method $uri $server_protocol" $status $body_bytes_sent '
+                 '"-" "$http_user_agent"';
+
+server {
+    listen 80;
+    server_name _;
+    access_log /var/log/nginx/access.log nophi;
+
+    # ── Security headers ──
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
+
+    client_max_body_size 2G;
+
+    location = /nginx-health { access_log off; return 200 "OK"; add_header Content-Type text/plain; }
+
+    # ===== FastAPI backend (/pacs-api/ → strip prefix → /api/v1, /health, /docs, /ws) =====
+    location /pacs-api/ {
+        proxy_pass http://api_backend/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        # WebSocket (notifications, inference progress)
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_read_timeout 86400;
+        proxy_request_buffering off;
+    }
+
+    # ===== Admin console (Next.js, basePath /pacs-admin — preserve prefix) =====
+    location /pacs-admin {
+        proxy_pass http://admin_app;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+
+    # ===== WeRU.B Viewer (built with PUBLIC_URL=/werub-viewer/) =====
+    location /werub-viewer/ {
+        proxy_pass http://werub_viewer/werub-viewer/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+
+    # ── P1: /dicom-web·/wado 토큰 게이트 (무인증 PHI 노출 차단) ──
+    # nginx가 Orthanc Basic을 주입하므로 클라이언트 인증 게이트가 없으면 QIDO/WADO PHI가
+    # 무인증으로 공개됨. 뷰어 userAuthenticationService가 Bearer(pacs_token)를 주입 →
+    # backend가 auth_request로 검증(RESEARCHER는 401). 내부 호출(프리페치 워커)도 서비스 토큰을 들고 온다
+    # (공개판 — 사설 대역 우회를 두지 않는다).
+    location = /_dwauth {
+        internal;
+        proxy_pass http://api_backend/api/v1/dicomweb/_authcheck;
+        proxy_pass_request_body off;
+        proxy_set_header Content-Length "";
+        proxy_set_header Authorization $http_authorization;
+        proxy_cache dwauth;
+        proxy_cache_key $http_authorization;
+        proxy_cache_valid 200 60s;
+        proxy_cache_valid 401 403 10s;
+    }
+
+    # ===== Orthanc DICOMweb (viewer fetches frames) — inject Basic auth =====
+    location /dicom-web/ {
+        satisfy any;
+        allow 127.0.0.1;   # 공개판: 사설 대역 우회 없음 — 게시 포트 · 앞단 프록시 뒤에서는 바깥 요청도 사설 대역에서 온 것으로 보인다
+        deny all;
+        auth_request /_dwauth;
+        proxy_pass http://orthanc_backend/dicom-web/;
+        proxy_set_header Authorization "Basic ${ORTHANC_BASIC_AUTH}";
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_request_buffering off;
+        proxy_read_timeout 600;
+        proxy_send_timeout 600;
+    }
+
+    # ===== Orthanc WADO-URI (legacy) =====
+    location /wado {
+        satisfy any;
+        allow 127.0.0.1;
+        deny all;
+        auth_request /_dwauth;
+        proxy_pass http://orthanc_backend/wado;
+        proxy_set_header Authorization "Basic ${ORTHANC_BASIC_AUTH}";
+        proxy_set_header Host $host;
+        proxy_read_timeout 300;
+    }
+
+    # ===== Orthanc Explorer / REST (admin) =====
+    location /pacs/ {
+        proxy_pass http://orthanc_backend/;
+        proxy_set_header Authorization "Basic ${ORTHANC_BASIC_AUTH}";
+        proxy_set_header Host $host;
+        proxy_read_timeout 600;
+    }
+
+    # ===== Landing → admin console =====
+    location = / { return 302 /pacs-admin/; }
+}
+
+# ===== HTTPS (production) — uncomment after placing certs in docker/nginx/certs =====
+# server {
+#     listen 443 ssl http2;
+#     server_name your.domain;
+#     ssl_certificate     /etc/nginx/certs/fullchain.pem;
+#     ssl_certificate_key /etc/nginx/certs/privkey.pem;
+#     # ... copy the location blocks above ...
+# }

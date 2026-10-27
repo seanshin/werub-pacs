@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>WeRU.B PACS 사용 설명서</title>
+<style>
+  :root{
+    --bg:#f7f8fa; --panel:#ffffff; --ink:#1f2937; --muted:#6b7280; --line:#e5e7eb;
+    --primary:#2563eb; --primary-d:#1d4ed8; --accent:#0ea5e9;
+    --tip:#ecfdf5; --tip-b:#10b981; --warn:#fffbeb; --warn-b:#f59e0b; --note:#eff6ff; --note-b:#3b82f6;
+    --code:#f1f5f9;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:"Noto Sans KR","Apple SD Gothic Neo",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    font-size:15px; line-height:1.75;
+  }
+  a{color:var(--primary); text-decoration:none}
+  a:hover{text-decoration:underline}
+  .layout{display:flex; max-width:1320px; margin:0 auto; gap:0}
+  .toc{
+    position:sticky; top:0; align-self:flex-start; height:100vh; width:288px; flex:0 0 288px;
+    overflow-y:auto; padding:22px 14px 60px; border-right:1px solid var(--line); background:var(--panel);
+  }
+  .toc .brand{font-weight:800; font-size:17px; color:var(--primary); margin:0 6px 2px}
+  .toc .sub{font-size:11px; color:var(--muted); margin:0 6px 14px}
+  .toc input{width:100%; padding:7px 10px; border:1px solid var(--line); border-radius:8px; font-size:12.5px; margin:0 0 10px}
+  .toc nav a{display:block; padding:5px 10px; border-radius:7px; color:#374151; font-size:13px}
+  .toc nav a:hover{background:#f1f5f9; text-decoration:none}
+  .toc nav a.h3{padding-left:24px; font-size:12px; color:#6b7280}
+  .toc .grp{margin:14px 6px 4px; font-size:11px; font-weight:700; letter-spacing:.04em; color:#9ca3af; text-transform:uppercase}
+  .content{flex:1 1 auto; min-width:0; padding:30px 44px 120px; background:var(--bg)}
+  .hero{background:linear-gradient(135deg,#1e3a8a,#2563eb); color:#fff; border-radius:16px; padding:34px; margin-bottom:26px}
+  .hero h1{margin:0 0 6px; font-size:28px; font-weight:800}
+  .hero p{margin:2px 0; opacity:.92; font-size:14px}
+  .hero .tag{display:inline-block; margin-top:12px; background:rgba(255,255,255,.18); padding:4px 12px; border-radius:999px; font-size:12px}
+  h2{font-size:22px; font-weight:800; margin:46px 0 12px; padding-bottom:8px; border-bottom:2px solid var(--line); scroll-margin-top:14px}
+  h2 .num{color:var(--primary); margin-right:8px}
+  .part{margin:54px 0 0; padding:10px 16px; background:#111827; color:#fff; border-radius:10px; font-size:13px; font-weight:700; letter-spacing:.05em}
+  h3{font-size:16px; font-weight:700; margin:26px 0 8px; color:#111827; scroll-margin-top:14px}
+  h4{font-size:14px; font-weight:700; margin:16px 0 4px; color:#374151}
+  p{margin:8px 0}
+  ul,ol{margin:8px 0; padding-left:22px}
+  li{margin:4px 0}
+  code{background:var(--code); padding:1px 6px; border-radius:5px; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12.5px; color:#0f172a}
+  kbd{background:#fff; border:1px solid #cbd5e1; border-bottom-width:2px; border-radius:6px; padding:1px 7px; font-family:ui-monospace,monospace; font-size:12px}
+  table{border-collapse:collapse; width:100%; margin:14px 0; font-size:13.5px; background:var(--panel); border-radius:10px; overflow:hidden; box-shadow:0 1px 2px rgba(0,0,0,.04)}
+  th,td{border:1px solid var(--line); padding:8px 11px; text-align:left; vertical-align:top}
+  th{background:#f8fafc; font-weight:700; color:#334155}
+  tr:nth-child(even) td{background:#fcfcfd}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:18px 20px; margin:14px 0; box-shadow:0 1px 2px rgba(0,0,0,.03)}
+  .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(232px,1fr)); gap:12px; margin:14px 0}
+  .grid .card{margin:0}
+  .grid .card h4{margin-top:0}
+  .callout{border-left:4px solid; border-radius:8px; padding:12px 16px; margin:14px 0; font-size:13.5px}
+  .callout p{margin:4px 0}
+  .callout.tip{background:var(--tip); border-color:var(--tip-b)}
+  .callout.warn{background:var(--warn); border-color:var(--warn-b)}
+  .callout.note{background:var(--note); border-color:var(--note-b)}
+  .callout b{display:block; margin-bottom:2px}
+  .badge{display:inline-block; font-size:10.5px; font-weight:700; padding:1px 8px; border-radius:999px; margin:1px 2px; vertical-align:middle; white-space:nowrap}
+  .b-admin{background:#fee2e2; color:#b91c1c}
+  .b-rad{background:#dbeafe; color:#1d4ed8}
+  .b-phy{background:#dcfce7; color:#15803d}
+  .b-tech{background:#fef3c7; color:#b45309}
+  .b-res{background:#ede9fe; color:#6d28d9}
+  .b-all{background:#e5e7eb; color:#374151}
+  .steps{counter-reset:step; list-style:none; padding-left:0}
+  .steps>li{counter-increment:step; position:relative; padding:8px 0 8px 40px; margin:0; border-bottom:1px dashed #eef2f7}
+  .steps>li:last-child{border-bottom:none}
+  .steps>li::before{content:counter(step); position:absolute; left:0; top:8px; width:26px; height:26px; background:var(--primary); color:#fff; border-radius:50%; font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center}
+  .steps .who{font-size:10.5px; font-weight:700; color:#fff; background:#64748b; border-radius:5px; padding:1px 7px; margin-left:6px}
+  /* flow diagram */
+  .flow{display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin:14px 0 8px; padding:14px; background:var(--panel); border:1px solid var(--line); border-radius:12px}
+  .flow .node{background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af; border-radius:8px; padding:6px 12px; font-size:12.5px; font-weight:600; white-space:nowrap}
+  .flow .node.alt{background:#fef3c7; border-color:#fde68a; color:#92400e}
+  .flow .node.done{background:#dcfce7; border-color:#bbf7d0; color:#166534}
+  .flow .node.start{background:#1e3a8a; border-color:#1e3a8a; color:#fff}
+  .flow .arrow{color:#94a3b8; font-weight:800; font-size:15px}
+  .lane{display:grid; grid-template-columns:120px 1fr; gap:0; margin:10px 0; border:1px solid var(--line); border-radius:10px; overflow:hidden; font-size:13px}
+  .lane .role{background:#f8fafc; font-weight:700; padding:10px 12px; border-right:1px solid var(--line); color:#334155}
+  .lane .act{padding:10px 12px}
+  .lane .row{display:contents}
+  .lane .row:nth-child(even) .role,.lane .row:nth-child(even) .act{background:#fcfcfd}
+  .muted{color:var(--muted)}
+  .top{position:fixed; right:22px; bottom:22px; background:var(--primary); color:#fff; width:44px; height:44px; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 14px rgba(37,99,235,.4); font-size:20px}
+  .top:hover{background:var(--primary-d); text-decoration:none}
+  footer{margin-top:50px; padding-top:18px; border-top:1px solid var(--line); color:var(--muted); font-size:12.5px}
+  @media (max-width:900px){ .toc{display:none} .content{padding:20px 16px 80px} .lane{grid-template-columns:90px 1fr} }
+  @media print{
+    .toc,.top{display:none} body{background:#fff; font-size:12px} .content{padding:0}
+    .hero,.part{-webkit-print-color-adjust:exact; print-color-adjust:exact}
+    h2{page-break-after:avoid} .card,table,.callout,.flow,.lane{page-break-inside:avoid}
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="toc">
+    <p class="brand">WeRU.B PACS</p>
+    <p class="sub">사용 설명서 · v12.9</p>
+    <input type="text" id="filter" placeholder="🔎 목차 검색…" oninput="filterToc(this.value)" />
+    <nav id="tocnav">
+      <div class="grp">PART 1 · 시작하기</div>
+      <a href="#intro">1. 개요</a>
+      <a href="#login">2. 로그인 · 역할</a>
+      <a href="#layout">3. 화면 구성</a>
+      <a href="#roles">4. 역할별 권한</a>
+      <div class="grp">PART 2 · 작업 흐름</div>
+      <a href="#wf-overview">5. 전체 파이프라인</a>
+      <a href="#wf-reading">6. 표준 판독 흐름</a>
+      <a href="#wf-tech">7. 방사선사 일과</a>
+      <a href="#wf-physician">8. 임상의(의뢰의)</a>
+      <a href="#wf-emergency">9. 응급/STAT</a>
+      <a href="#wf-retake">10. 재촬영</a>
+      <a href="#wf-consult">11. 협진/세컨드오피니언</a>
+      <a href="#wf-patient">12. 환자 업로드→승인</a>
+      <a href="#wf-quality">13. DICOM 품질 이슈</a>
+      <a href="#wf-ai">14. AI 활용</a>
+      <a href="#wf-admin">15. 관리자 초기 설정</a>
+      <div class="grp">PART 3 · 판독 업무</div>
+      <a href="#dashboard">16. 대시보드</a>
+      <a href="#reading">17. 판독</a>
+      <a href="#viewer">18. WeRU.B 뷰어</a>
+      <a href="#assignments">19. 배정</a>
+      <a href="#templates">20. 템플릿</a>
+      <a href="#sla">21. SLA</a>
+      <a href="#emergency">⚑ 응급 보드</a>
+      <div class="grp">PART 4 · 영상·검사</div>
+      <a href="#worklist">22. 워크리스트</a>
+      <a href="#technologist">23. 방사선사</a>
+      <a href="#upload">24. 업로드·수집</a>
+      <a href="#reception">25. 수신 모니터</a>
+      <a href="#remotes">26. 외부 연동(Q/R)</a>
+      <div class="grp">PART 5 · 품질·정규화</div>
+      <a href="#dicom-issues">27. DICOM 이슈</a>
+      <a href="#normalization">28. 정규화</a>
+      <a href="#retake">29. 재촬영</a>
+      <div class="grp">PART 6 · AI·협진·환자</div>
+      <a href="#ai">30. AI</a>
+      <a href="#consults">31. 협진</a>
+      <a href="#my-patients">32. 내 환자</a>
+      <a href="#portals">33. 환자 포털·키오스크</a>
+      <a href="#esign">34. 전자서명</a>
+      <a href="#xds">35. 기관 간 교환</a>
+      <div class="grp">PART 7 · 운영·관리</div>
+      <a href="#bi">36. 경영/운영 BI</a>
+      <a href="#archive">37. 아카이브</a>
+      <a href="#anonymize">38. 익명화·IRB</a>
+      <a href="#audit">39. 감사 로그</a>
+      <a href="#settings">40. 설정·사용자</a>
+      <div class="grp">부록</div>
+      <a href="#status">상태값 사전</a>
+      <a href="#shortcuts">단축키</a>
+      <a href="#security">보안 안내</a>
+      <a href="#faq">FAQ · 문제 해결</a>
+    </nav>
+  </aside>
+
+  <main class="content">
+    <div class="hero">
+      <h1>WeRU.B PACS 사용 설명서</h1>
+      <p>웹 기반 의료영상 저장·전송·판독 시스템 (PACS) + 의료 AI 연동</p>
+      <p>병원/클리닉 실무용 · DICOM 표준 · OHIF/Cornerstone3D 뷰어</p>
+      <span class="tag">버전 v12.9 · 최종 업데이트 2026-06</span>
+    </div>
+
+    <div class="callout note">
+      <b>이 설명서 보는 법</b>
+      <p><b>PART 2 「작업 흐름」</b>은 “무엇을 어떤 순서로” 처리하는지 업무 시나리오별로 안내하고,
+      <b>PART 3~7</b>은 메뉴별 상세 기능을 설명합니다. 처음이라면 본인 역할의 작업 흐름(6~15장)부터 읽으세요.
+      메뉴 제목 옆 <span class="badge b-all">배지</span>는 사용 가능한 역할입니다.</p>
+    </div>
+    <p class="muted" style="font-size:13px">역할 표기:
+      <span class="badge b-admin">관리자</span>
+      <span class="badge b-rad">판독의</span>
+      <span class="badge b-res">전공의</span>
+      <span class="badge b-phy">임상의</span>
+      <span class="badge b-tech">방사선사</span>
+      <span class="badge b-res">연구자</span>
+      <span class="badge b-all">전체</span>
+    </p>
+
+    <div class="part">PART 1 · 시작하기</div>
+
+    <h2 id="intro"><span class="num">1</span>개요</h2>
+    <p>WeRU.B PACS는 중소 병원/클리닉이 도입할 수 있는 웹 기반 PACS입니다. DICOM 영상의 수신·저장·검색·판독·배포와
+    의료 AI 분석을 하나의 시스템에서 처리합니다.</p>
+    <div class="grid">
+      <div class="card"><h4>🖥️ 웹 뷰어</h4><p class="muted">설치 없이 브라우저에서 2D/MPR/MIP/3D 판독. 측정·주석·핵심영상(KOS).</p></div>
+      <div class="card"><h4>📥 영상 수집</h4><p class="muted">관리자 업로드·환자 포털·키오스크·외부 PACS Q/R·DICOM 전송(DIMSE/DICOMweb).</p></div>
+      <div class="card"><h4>✅ 비표준 검증</h4><p class="muted">비표준 DICOM 자동 검증·수정(JPEG 밀도/Pixel Spacing 교차검증 등 24규칙, 15개 자동수정).</p></div>
+      <div class="card"><h4>🧠 의료 AI</h4><p class="muted">모달리티별 추론·선제 스크리닝·거버넌스. 결과는 참고용(SaMD 면책).</p></div>
+      <div class="card"><h4>📝 판독 리포트</h4><p class="muted">템플릿 기반 판독문·서명·PKI 전자서명·PDF 배포.</p></div>
+      <div class="card"><h4>🏥 HIS/RIS 연동</h4><p class="muted">SSO 로그인, 오더 동기화, HL7 v2, 워크리스트(MWL/MPPS).</p></div>
+    </div>
+    <h3>주요 화면 주소</h3>
+    <table>
+      <tr><th>화면</th><th>주소</th><th>용도</th></tr>
+      <tr><td>관리자 콘솔</td><td><code>/pacs-admin</code></td><td>판독·관리·운영 (본 설명서 대상)</td></tr>
+      <tr><td>WeRU.B 뷰어</td><td><code>/werub-viewer</code></td><td>영상 판독 뷰어</td></tr>
+      <tr><td>환자 업로드 포털</td><td><code>/pacs-admin/patient-upload</code></td><td>환자 본인 영상 업로드(토큰)</td></tr>
+      <tr><td>키오스크</td><td><code>/pacs-admin/kiosk</code></td><td>접수 데스크 터치 업로드</td></tr>
+      <tr><td>API 문서</td><td><code>/pacs-api/docs</code></td><td>개발자용 REST API 명세</td></tr>
+    </table>
+
+    <h2 id="login"><span class="num">2</span>로그인 · 역할</h2>
+    <ol class="steps">
+      <li>브라우저에서 <code>/pacs-admin</code> 접속</li>
+      <li>아이디(사번/이메일)와 비밀번호 입력 후 <b>로그인</b> (병원 통합 로그인 SSO 사용 시 자동 진입)</li>
+      <li>역할에 따라 상단 메뉴가 구성되어 대시보드로 진입</li>
+    </ol>
+    <div class="callout warn">
+      <b>보안 정책</b>
+      <p>비밀번호 12자 이상(복잡도 충족), 로그인 실패 반복 시 일시 차단, <b>30분 무활동 시 자동 로그아웃</b>.
+      공용 PC는 사용 후 우측 상단 사용자 메뉴에서 반드시 로그아웃하세요.</p>
+    </div>
+    <h3>역할(Role) 종류</h3>
+    <table>
+      <tr><th>역할</th><th>설명</th><th>주요 메뉴</th></tr>
+      <tr><td><span class="badge b-admin">관리자 admin</span></td><td>시스템 전체 관리·설정·사용자·감사</td><td>모든 메뉴</td></tr>
+      <tr><td><span class="badge b-rad">판독의 radiologist</span></td><td>영상 판독·리포트 서명</td><td>판독·배정·템플릿·SLA·협진·BI</td></tr>
+      <tr><td><span class="badge b-res">전공의 resident</span></td><td>판독의에 준함(성과 통계 포함)</td><td>판독의와 동일</td></tr>
+      <tr><td><span class="badge b-phy">임상의 physician</span></td><td>의뢰 주치의 — 본인 환자 결과 열람</td><td>내 환자·응급·재촬영</td></tr>
+      <tr><td><span class="badge b-tech">방사선사 technologist</span></td><td>촬영·업로드·정규화·수신</td><td>워크리스트·업로드·정규화·수신모니터</td></tr>
+      <tr><td><span class="badge b-res">연구자 researcher</span></td><td>익명화·연구 데이터</td><td>익명화·IRB</td></tr>
+    </table>
+
+    <h2 id="layout"><span class="num">3</span>화면 구성</h2>
+    <ul>
+      <li><b>좌측 로고</b> <code>WeRU.B PACS</code> — 클릭 시 대시보드</li>
+      <li><b>좌측 메뉴군</b> — 판독 업무(대시보드·판독·배정·워크리스트 등)</li>
+      <li><b>우측 메뉴군</b> — 관리/운영(설정·사용자·AI·정규화 등)</li>
+      <li><b>우측 상단 도구</b> — <code>WeRU.B ↗</code>(뷰어), <code>API ↗</code>, <b>📖 매뉴얼</b>,
+        <b>🌙 다크모드</b>, <b>🔔 알림</b>, <b>사용자 메뉴</b></li>
+    </ul>
+    <div class="callout tip"><b>팁</b><p>메뉴는 역할에 따라 자동 필터링됩니다. <b>🔔 알림</b>의 빨간 숫자는 미확인 알림 수입니다. <b>정규화</b> 메뉴의 숫자 배지는 검토 대기 건수입니다.</p></div>
+
+    <h2 id="roles"><span class="num">4</span>역할별 권한 매트릭스</h2>
+    <table>
+      <tr><th>메뉴</th><th>관리자</th><th>판독의/전공의</th><th>임상의</th><th>방사선사</th><th>연구자</th></tr>
+      <tr><td>대시보드</td><td>✔</td><td>✔</td><td>✔</td><td>✔</td><td>✔</td></tr>
+      <tr><td>판독 / 배정 / 템플릿</td><td>✔</td><td>✔</td><td></td><td>배정만</td><td></td></tr>
+      <tr><td>내 환자</td><td>✔</td><td>✔</td><td>✔(본인 의뢰분)</td><td></td><td></td></tr>
+      <tr><td>워크리스트 / 업로드 / 정규화</td><td>✔</td><td></td><td></td><td>✔</td><td></td></tr>
+      <tr><td>수신 모니터 / 아카이브</td><td>✔</td><td>✔</td><td></td><td>✔</td><td></td></tr>
+      <tr><td>협진 / SLA / 경영BI / 기관간교환</td><td>✔</td><td>✔</td><td></td><td></td><td></td></tr>
+      <tr><td>익명화 / IRB</td><td>✔</td><td></td><td></td><td></td><td>✔</td></tr>
+      <tr><td>설정·사용자·AI·승인큐·DICOM이슈·외부연동·감사로그</td><td>✔</td><td></td><td></td><td></td><td></td></tr>
+    </table>
+    <div class="callout note"><b>Break-the-Glass(응급 열람)</b><p>권한 밖 영상을 응급 열람할 때 사유를 기록하고 임시 접근하는 기능. <b>임상 열람에 한정</b>되며 관리·반출·삭제에는 적용되지 않고 모든 사용이 감사 로그에 남습니다.</p></div>
+
+    <div class="part">PART 2 · 작업 흐름 (업무 시나리오)</div>
+
+    <h2 id="wf-overview"><span class="num">5</span>전체 파이프라인 한눈에 보기</h2>
+    <p>한 검사가 들어와 환자에게 결과가 전달되기까지의 큰 흐름입니다. 각 단계는 아래 시나리오(6장~)에서 상세히 다룹니다.</p>
+    <div class="flow">
+      <span class="node start">검사 오더</span><span class="arrow">→</span>
+      <span class="node">촬영</span><span class="arrow">→</span>
+      <span class="node">영상 수신</span><span class="arrow">→</span>
+      <span class="node alt">자동 검증·정규화</span><span class="arrow">→</span>
+      <span class="node alt">선제 AI</span><span class="arrow">→</span>
+      <span class="node">배정</span><span class="arrow">→</span>
+      <span class="node">판독</span><span class="arrow">→</span>
+      <span class="node">서명</span><span class="arrow">→</span>
+      <span class="node done">결과 배포</span>
+    </div>
+    <p class="muted" style="font-size:12.5px"><span class="badge b-all" style="background:#fef3c7;color:#92400e">노랑</span> 단계는 시스템이 자동 처리합니다(사람 개입은 예외 시).</p>
+    <div class="lane">
+      <div class="row"><div class="role">방사선사</div><div class="act">오더 확인 → 촬영(MWL/MPPS) → 업로드/수신 확인 → (필요시) 정규화·재촬영</div></div>
+      <div class="row"><div class="role">시스템</div><div class="act">DICOM 자동 검증·수정 → 선제 AI 스크리닝 → (규칙 시) 자동 배정·프리페치</div></div>
+      <div class="row"><div class="role">판독의</div><div class="act">판독 큐 → 뷰어 검토 → 판독문 작성·서명 → 긴급 시 통보</div></div>
+      <div class="row"><div class="role">임상의</div><div class="act">내 환자에서 결과 확인 → 영상/리포트 열람 → 추가 검사·협진 요청</div></div>
+    </div>
+
+    <h2 id="wf-reading"><span class="num">6</span>작업 흐름 ① 표준 판독 <span class="badge b-rad">판독의</span></h2>
+    <p><b>목적</b> 배정된 검사를 열어 판독문을 작성·서명하고 의뢰자에게 결과를 전달합니다.</p>
+    <div class="flow">
+      <span class="node start">판독 큐</span><span class="arrow">→</span>
+      <span class="node">검사 선택</span><span class="arrow">→</span>
+      <span class="node">뷰어 검토</span><span class="arrow">→</span>
+      <span class="node">prior 비교</span><span class="arrow">→</span>
+      <span class="node">판독문 작성</span><span class="arrow">→</span>
+      <span class="node">서명</span><span class="arrow">→</span>
+      <span class="node done">의뢰자 알림</span>
+    </div>
+    <ol class="steps">
+      <li><b>판독 큐 진입</b> — 상단 <b>판독</b> 메뉴. 긴급/STAT 검사는 빨갛게 강조 표시됩니다.<span class="who">판독</span></li>
+      <li><b>검사 열기</b> — <b>판독 보기</b>(통합 화면) 또는 <b>뷰어 열기</b>(WeRU.B). 통합 화면은 영상·환자정보·판독문·AI를 한 화면에 보여줍니다.</li>
+      <li><b>영상 검토</b> — 뷰어에서 창조절(W/L)·확대·측정. 필요한 슬라이스는 <b>핵심영상(KOS)</b>으로 마킹.</li>
+      <li><b>비교(prior)</b> — 직전 검사가 있으면 나란히 비교(프리페치로 빠르게 로딩).</li>
+      <li><b>AI 참고</b> — AI 패널에서 분석 실행, 결과를 판독문 초안으로 불러오기(참고용).</li>
+      <li><b>판독문 작성</b> — <b>소견(Findings)·결론(Impression)·권고</b> 입력. <b>템플릿</b>으로 표준 문구 삽입.</li>
+      <li><b>임시 저장 / 서명</b> — 작성 중엔 임시 저장, 완료 시 <b>서명(최종)</b>. 전자서명 연동 시 PDF에 PKI 서명.</li>
+      <li><b>통보</b> — 서명 즉시 의뢰자에게 알림. 긴급 소견은 별도 긴급 통보.<span class="who">완료</span></li>
+    </ol>
+    <div class="callout warn"><b>서명 후 정정</b><p>최종 서명 리포트는 법적 기록입니다. 정정은 <b>추가 판독(새 버전)</b>으로 기록되며, 두 사람이 동시에 서명하려 하면 시스템이 충돌을 자동 차단합니다.</p></div>
+    <p class="muted">관련 메뉴: <a href="#reading">17. 판독</a> · <a href="#viewer">18. 뷰어</a> · <a href="#templates">20. 템플릿</a> · <a href="#esign">34. 전자서명</a></p>
+
+    <h2 id="wf-tech"><span class="num">7</span>작업 흐름 ② 방사선사 일과 <span class="badge b-tech">방사선사</span></h2>
+    <p><b>목적</b> 검사를 촬영하고 영상을 정상적으로 시스템에 등록합니다.</p>
+    <div class="lane">
+      <div class="row"><div class="role">1. 준비</div><div class="act"><b>워크리스트</b>에서 오늘 검사 확인 — 장비는 MWL로 자동 조회</div></div>
+      <div class="row"><div class="role">2. 촬영</div><div class="act">검사 진행 → 장비가 진행상태 보고(MPPS) → 영상이 PACS로 전송(C-STORE)</div></div>
+      <div class="row"><div class="role">3. 확인</div><div class="act"><b>수신 모니터</b>에서 영상 도착·매수 확인. 외부 영상은 <b>업로드</b>/<b>외부연동 Q/R</b></div></div>
+      <div class="row"><div class="role">4. 품질</div><div class="act">비표준 영상은 시스템이 자동 검증. <b>정규화 → 검토</b>에서 수정 제안 승인</div></div>
+      <div class="row"><div class="role">5. 예외</div><div class="act">재촬영 요청이 오면 <b>재촬영</b>에서 승인 → 재촬영 → 완료 처리</div></div>
+    </div>
+    <div class="callout tip"><b>매수가 안 맞을 때</b><p>수신 모니터에서 누락이 보이면 장비 재전송 또는 외부연동 Q/R로 보완하세요. 비표준으로 안 열리면 27장(DICOM 이슈)을 확인합니다.</p></div>
+    <p class="muted">관련 메뉴: <a href="#worklist">22. 워크리스트</a> · <a href="#reception">25. 수신 모니터</a> · <a href="#upload">24. 업로드</a> · <a href="#normalization">28. 정규화</a></p>
+
+    <h2 id="wf-physician"><span class="num">8</span>작업 흐름 ③ 임상의(의뢰의) <span class="badge b-phy">임상의</span></h2>
+    <p><b>목적</b> 내가 의뢰한 검사의 영상·판독 결과를 확인합니다.</p>
+    <ol class="steps">
+      <li><b>내 환자</b> 메뉴 진입 — 본인 의뢰분만 표시(판독 상태 포함).<span class="who">임상의</span></li>
+      <li>판독 완료 알림(🔔)이 오면 해당 환자 클릭</li>
+      <li><b>리포트 보기</b>(소견/결론) 또는 <b>PDF</b>로 출력</li>
+      <li>필요 시 <b>영상 썸네일 → 뷰어 열기</b>로 영상 직접 확인</li>
+      <li>추가 검사가 필요하면 <b>재촬영</b> 요청 또는 협진 의뢰</li>
+    </ol>
+    <div class="callout note"><b>접근 범위</b><p>임상의는 <b>본인 의뢰분만</b> 열람합니다. 권한 밖 환자가 필요하면 관리자/판독 책임자에게 문의하세요.</p></div>
+    <p class="muted">관련 메뉴: <a href="#my-patients">32. 내 환자</a> · <a href="#retake">29. 재촬영</a></p>
+
+    <h2 id="wf-emergency"><span class="num">9</span>작업 흐름 ④ 응급/STAT <span class="badge b-rad">판독의</span> <span class="badge b-tech">방사선사</span></h2>
+    <p><b>목적</b> 응급 검사를 최우선으로 판독·통보합니다.</p>
+    <div class="flow">
+      <span class="node start">STAT 오더</span><span class="arrow">→</span>
+      <span class="node">우선 촬영</span><span class="arrow">→</span>
+      <span class="node alt">선제 AI 긴급 알림</span><span class="arrow">→</span>
+      <span class="node">응급 큐 최상단</span><span class="arrow">→</span>
+      <span class="node">즉시 판독</span><span class="arrow">→</span>
+      <span class="node done">긴급 통보</span>
+    </div>
+    <ul>
+      <li><b>응급</b> 메뉴에서 STAT/긴급 검사만 모아 봅니다(일반 큐보다 상위 정렬).</li>
+      <li>AI 선제 스크리닝이 긴급 소견(예: 출혈/기흉 의심)을 감지하면 판독의에게 즉시 알림(참고용).</li>
+      <li>판독 후 <b>긴급 소견 통보</b> — 의뢰자/당직에게 즉시 전달, 통보 시각이 기록됩니다.</li>
+    </ul>
+    <p class="muted">관련 메뉴: <a href="#emergency">응급 영상 보드</a> · <a href="#ai">30. AI</a> · <a href="#sla">21. SLA</a></p>
+
+    <h2 id="wf-retake"><span class="num">10</span>작업 흐름 ⑤ 재촬영 <span class="badge b-rad">판독의</span> <span class="badge b-phy">임상의</span> <span class="badge b-tech">방사선사</span></h2>
+    <div class="lane">
+      <div class="row"><div class="role">판독의/임상의</div><div class="act"><b>재촬영</b>에서 요청 등록 — 사유/범주(체위·움직임·불완전)/긴급도 입력 (상태: <code>requested</code>)</div></div>
+      <div class="row"><div class="role">방사선사/관리자</div><div class="act">검토 후 <b>승인</b>(<code>approved</code>) 또는 <b>거부</b>(<code>rejected</code>)</div></div>
+      <div class="row"><div class="role">방사선사</div><div class="act">일정 확정(<code>scheduled</code>) → 재촬영 → <b>완료</b>(<code>completed</code>)</div></div>
+    </div>
+    <p class="muted">관련 메뉴: <a href="#retake">29. 재촬영</a></p>
+
+    <h2 id="wf-consult"><span class="num">11</span>작업 흐름 ⑥ 협진 · 세컨드오피니언 <span class="badge b-rad">판독의</span></h2>
+    <div class="flow">
+      <span class="node start">협진 요청</span><span class="arrow">→</span>
+      <span class="node">토큰 링크 발송</span><span class="arrow">→</span>
+      <span class="node alt">외부 전문의 동의</span><span class="arrow">→</span>
+      <span class="node">영상 열람·의견 제출</span><span class="arrow">→</span>
+      <span class="node done">의견 회수·알림</span>
+    </div>
+    <ol class="steps">
+      <li><b>협진</b> 또는 <b>세컨드오피니언</b>에서 대상 검사·질의 입력 후 요청 생성</li>
+      <li>외부 전문의에게 <b>만료되는 1회용 토큰 링크</b>(이메일) 발송</li>
+      <li>외부 전문의는 <b>의뢰 포털</b>에서 로그인 없이 동의 후 영상 확인·의견 제출</li>
+      <li>제출되면 요청자(판독의)에게 알림, 의견이 시스템에 회수됨</li>
+    </ol>
+    <div class="callout note"><b>안전 공유</b><p>토큰은 만료·1회용이며 접근 내역은 감사 로그에 남습니다.</p></div>
+    <p class="muted">관련 메뉴: <a href="#consults">31. 협진</a></p>
+
+    <h2 id="wf-patient"><span class="num">12</span>작업 흐름 ⑦ 환자 영상 업로드 → 승인 <span class="badge b-tech">방사선사</span> <span class="badge b-admin">관리자</span></h2>
+    <div class="flow">
+      <span class="node start">토큰 발급</span><span class="arrow">→</span>
+      <span class="node">환자 업로드(포털/키오스크)</span><span class="arrow">→</span>
+      <span class="node alt">승인 큐 대기</span><span class="arrow">→</span>
+      <span class="node">매칭·중복 확인</span><span class="arrow">→</span>
+      <span class="node done">승인·저장</span>
+    </div>
+    <ol class="steps">
+      <li>병원이 환자에게 <b>1회용 업로드 토큰</b> 발급</li>
+      <li>환자가 <b>환자 포털</b> 또는 접수 데스크 <b>키오스크</b>에서 CD/USB 영상 업로드</li>
+      <li>업로드 영상은 <b>승인 큐</b>(<code>/upload-queue</code>)에 대기</li>
+      <li>관리자가 환자 매칭·중복 여부 확인 후 <b>승인</b>(저장) 또는 <b>반려</b></li>
+    </ol>
+    <div class="callout warn"><b>대용량</b><p>업로드 용량 상한이 있습니다. 매우 큰 검사는 나눠 올리거나 외부 PACS Q/R를 이용하세요.</p></div>
+    <p class="muted">관련 메뉴: <a href="#upload">24. 업로드·수집</a> · <a href="#portals">33. 환자 포털·키오스크</a></p>
+
+    <h2 id="wf-quality"><span class="num">13</span>작업 흐름 ⑧ DICOM 품질 이슈 처리 <span class="badge b-admin">관리자</span> <span class="badge b-tech">방사선사</span></h2>
+    <div class="flow">
+      <span class="node start">영상 수신</span><span class="arrow">→</span>
+      <span class="node alt">자동 검증(24규칙)</span><span class="arrow">→</span>
+      <span class="node">이슈 발견</span><span class="arrow">→</span>
+      <span class="node">자동수정(백업)</span><span class="arrow">→</span>
+      <span class="node alt">불가 시 미수정 플래그</span><span class="arrow">→</span>
+      <span class="node done">검토·필요시 롤백</span>
+    </div>
+    <ul>
+      <li>5분 주기 자동 검증이 신규 영상을 점검(예: JPEG 밀도 vs Pixel Spacing 불일치, UID/VR/Transfer Syntax 오류).</li>
+      <li>자동수정 가능한 15개 규칙은 <b>원본 백업 후</b> 보정(연쇄 수정 포함). 잘못되면 <b>실제 원본으로 롤백</b>(원본 바이트 복원).</li>
+      <li>자동수정 불가 이슈는 <b>미수정 상태로 플래그</b>되어 사람이 검토합니다.</li>
+      <li><b>설정</b>에서 규칙 on/off·에러 문구·모달리티별 렌더 조정.</li>
+    </ul>
+    <div class="callout tip"><b>측정값이 이상할 때</b><p>거리/면적 측정이 틀리면 Pixel Spacing 비표준 가능성. DICOM 이슈 센터에서 해당 규칙을 확인·적용하세요.</p></div>
+    <p class="muted">관련 메뉴: <a href="#dicom-issues">27. DICOM 이슈</a> · <a href="#normalization">28. 정규화</a></p>
+
+    <h2 id="wf-ai"><span class="num">14</span>작업 흐름 ⑨ AI 활용 <span class="badge b-admin">관리자</span> <span class="badge b-rad">판독의</span></h2>
+    <div class="flow">
+      <span class="node start">모델 등록·활성</span><span class="arrow">→</span>
+      <span class="node alt">자동 스크리닝/수동 추론</span><span class="arrow">→</span>
+      <span class="node">판독의 검토</span><span class="arrow">→</span>
+      <span class="node">수용/기각 피드백</span><span class="arrow">→</span>
+      <span class="node done">거버넌스 모니터링</span>
+    </div>
+    <ol class="steps">
+      <li><b>관리자</b>: <b>AI → 모델</b>에서 모델을 등록하고 <b>활성</b>화, 임상/연구 용도 구분.<span class="who">관리자</span></li>
+      <li><b>자동</b>: 신규 검사를 모달리티별 모델이 선제 스크리닝(actionable 소견 시 판독의 알림).</li>
+      <li><b>수동</b>: 판독의가 뷰어 AI 패널에서 직접 추론 실행.</li>
+      <li><b>피드백</b>: 뷰어 <b>AI 패널</b>에서 결과를 <b>수용/기각</b> — 수용률이 거버넌스 데이터로 집계.</li>
+      <li><b>거버넌스</b>: 성능 추이·드리프트 감지·준수 점검. 드리프트 시 자동 격리(서킷브레이커, 기본 off).</li>
+    </ol>
+    <div class="callout warn"><b>SaMD 면책</b><p>모든 AI 결과는 <b>진단 보조(참고용)</b>입니다. 최종 판단·책임은 판독의에게 있습니다.</p></div>
+    <p class="muted">관련 메뉴: <a href="#ai">30. AI</a></p>
+
+    <h2 id="wf-admin"><span class="num">15</span>작업 흐름 ⑩ 관리자 초기 설정 <span class="badge b-admin">관리자</span></h2>
+    <p>신규 도입/운영 시작 시 권장 순서입니다.</p>
+    <ol class="steps">
+      <li><b>사용자·역할</b> 생성 (<a href="#settings">사용자</a>) — 판독의/방사선사/임상의 계정과 역할 부여</li>
+      <li><b>외부 연동</b> 설정 — HIS/RIS 오더 동기화, 외부 PACS 노드(AE/IP/Port) 등록</li>
+      <li><b>DICOM 이슈 규칙</b> 점검 — 기관 장비 특성에 맞춰 규칙 on/off, 메시지 문구</li>
+      <li><b>SLA</b> 설정 — 모달리티별 임계(분)·에스컬레이션 규칙</li>
+      <li><b>판독 템플릿</b> 등록 — 자주 쓰는 표준 문구</li>
+      <li><b>AI 모델</b> 활성화·스크리닝 임계 설정</li>
+      <li><b>알림·백업·감사</b> 정책 확인 후 운영 시작</li>
+    </ol>
+    <p class="muted">관련 메뉴: <a href="#settings">40. 설정·사용자</a> · <a href="#remotes">26. 외부연동</a> · <a href="#dicom-issues">27</a> · <a href="#sla">21</a></p>
+
+    <div class="part">PART 3 · 판독 업무</div>
+
+    <h2 id="dashboard"><span class="num">16</span>대시보드 <span class="badge b-all">전체</span></h2>
+    <p>로그인 후 첫 화면. 30초마다 자동 갱신됩니다.</p>
+    <ul>
+      <li><b>긴급 배너</b> — 긴급 판독 건이 있으면 상단에 표시 → <b>판독 시작</b> 바로가기</li>
+      <li><b>핵심 지표 카드</b> — 판독 대기(+SLA 위반/경고), 오늘 완료, 오늘 워크리스트(모달리티별), AI 분석(완료/긴급소견)</li>
+      <li><b>운영 카드</b> — 워크리스트(MWL/MPPS), SLA(7일), 재촬영, HIS 연동, 스토리지</li>
+      <li><b>품질 카드</b> — DICOM 이슈(심각도별), 자동수정율, 영상 출처, 업로드 큐</li>
+      <li><b>판독 대기 목록</b> — 상위 15건(SLA 표시·뷰어/판독 버튼), <b>전체 보기</b>로 판독 큐 이동</li>
+    </ul>
+
+    <h2 id="reading"><span class="num">17</span>판독 <span class="badge b-rad">판독의</span> <span class="badge b-res">전공의</span></h2>
+    <h3>판독 큐</h3>
+    <p>각 행에서 <b>뷰어 열기</b> 또는 <b>판독 보기</b>로 진입합니다. 상태 필터: <b>전체 / 판독 대기 / 작성 중 / 예비 판독 / 완료</b>.
+    긴급·STAT 검사는 행이 빨갛게 강조 표시됩니다(정렬 순서는 서버 기준).</p>
+    <h3>판독 보기(통합 화면)</h3>
+    <p><code>/reading/view</code> — 환자정보·판독문 편집기·AI 결과를 한 화면에서. 영상은 <b>뷰어 열기</b> 버튼으로 별도 창에서 보거나,
+    single 모드에서 뷰어가 화면에 임베드됩니다(썸네일 목록은 아님).</p>
+    <ul>
+      <li><b>편집기</b> — 소견·결론·권고 입력, 템플릿 삽입, 자동 임시저장</li>
+      <li><b>AI 초안 반영</b> — 페이지를 연 뒤 뷰어 등에서 AI 초안이 작성되면 약 2초 폴링으로 편집기에 반영(검토 후 수정)</li>
+      <li><b>서명</b> — 최종 서명 시 확정·의뢰자 알림</li>
+      <li><b>외부 전자서명</b> — PKI 서명, 보증 배지(HSM/소프트웨어). HIS 세션이 있어야 동작 (<a href="#esign">34장</a>)</li>
+      <li><b>이동</b> — <kbd>Q</kbd> 판독 큐로, <kbd>N</kbd>(다음 Study)으로 다음 미판독 검사로 연속 진행 (※이전 이동은 없음)</li>
+    </ul>
+    <h3>판독 통계</h3>
+    <p><code>/reading/stats</code>(TAT)·<code>/reading/residents</code>(전공의 성과)에서 소요시간·생산성 확인.</p>
+
+    <h2 id="viewer"><span class="num">18</span>WeRU.B 뷰어</h2>
+    <p>OHIF v3 / Cornerstone3D 기반. 상단 <code>WeRU.B ↗</code> 또는 판독 큐 <b>뷰어 열기</b>로 실행.</p>
+    <div class="grid">
+      <div class="card"><h4>레이아웃</h4><p class="muted">1×1·2×2 등 분할, MPR, 3D 볼륨(VRT). 재구성 가능한 <b>CT/MR은 열자마자 MPR 3면이 자동 적용</b>되고, 단면 검사는 1×1로 열립니다. (MIP는 MPR 슬랩 두께로 표현)</p></div>
+      <div class="card"><h4>이전검사 비교</h4><p class="muted">툴바 <b>이전검사</b> 버튼 또는 <kbd>P</kbd> — 같은 환자의 최신 이전 검사를 찾아 <b>나란히 비교 화면</b>으로 한 번에 전환. 이전 검사가 없으면 안내만 표시.</p></div>
+      <div class="card"><h4>창 조절 W/L</h4><p class="muted">모달리티별 프리셋(폐·뼈·복부 등, 단축키 1~5), 드래그로 밝기/대조.</p></div>
+      <div class="card"><h4>측정·주석</h4><p class="muted">길이·각도·ROI·픽셀값. <b>저장</b>하면 새로고침 후 복원(재수화)됩니다.</p></div>
+      <div class="card"><h4>핵심영상 KOS</h4><p class="muted">중요 슬라이스 마킹 → 판독문/공유 첨부.</p></div>
+      <div class="card"><h4>AI 패널</h4><p class="muted">AI 분석 실행·오버레이·판독문 전송.</p></div>
+      <div class="card"><h4>리포트 패널</h4><p class="muted">뷰어 내 판독문 작성·서명(판독 동기화).</p></div>
+    </div>
+    <div class="callout tip"><b>3D VRT</b><p>레이아웃 선택기의 3D 항목(<b>3D 메인 / MPR + 3D / 3D 4분할 / 3D 단독 / 3D 주화면</b>)으로 진입합니다. 3D 진입 시 <b>"참고용 3D 렌더링 — 측정은 MPR에서"</b> 안내가 표시되고 3D 화면에서는 측정 도구가 잠겨 측정 오류를 방지합니다. 렌더링 프리셋은 한국 임상 기준 <b>13종</b>(뼈·연부조직·폐·심장·관상동맥·간혈관 등, 한글 표기)으로 정리되어 있습니다. 재구성 가능한 다중 영상 시리즈에서만 활성화됩니다.</p></div>
+
+    <h2 id="assignments"><span class="num">19</span>배정 <span class="badge b-rad">판독의</span> <span class="badge b-tech">방사선사</span></h2>
+    <ul>
+      <li><b>수동 배정</b> — 검사를 선택해 특정 판독의 지정</li>
+      <li><b>자동 배정</b> — 근무 중 판독의에게 규칙에 따라 분배</li>
+      <li><b>재배정</b> — 부재/과부하 시 변경</li>
+    </ul>
+    <div class="callout note"><b>프리페칭</b><p>배정 시 다음 검사+직전 비교영상을 미리 캐시에 적재해 뷰어 첫 로딩을 가속(자동).</p></div>
+
+    <h2 id="templates"><span class="num">20</span>템플릿 <span class="badge b-rad">판독의</span></h2>
+    <ol class="steps">
+      <li><b>템플릿</b> 메뉴 → <b>새 템플릿</b></li>
+      <li>제목·모달리티·본문(소견/결론 구조) 작성·저장</li>
+      <li>판독 화면에서 선택 → 삽입 후 수정</li>
+    </ol>
+
+    <h2 id="sla"><span class="num">21</span>SLA <span class="badge b-rad">판독의</span></h2>
+    <ul>
+      <li><b>설정</b> — 모달리티별 경고/위험 임계(분), 에스컬레이션 규칙(notify / reassign / escalate_to_supervisor)</li>
+      <li><b>에스컬레이션 이력</b> — 조회·해결 처리</li>
+      <li><b>통계</b> — 기간별 건수·유형</li>
+    </ul>
+    <p class="muted">5분 주기 자동 점검(미해결 10분 주기 자동 해소). 관리자는 <b>즉시 체크(지금 체크)</b>로 수동 실행 가능.</p>
+    <div class="callout note"><b>참고</b><p>현재 에스컬레이션 동작은 <b>알림 발송</b>입니다 — “reassign” 규칙도 담당자에게 <b>알림</b>을 보낼 뿐, 검사를 자동으로 다른 판독의에게 옮기지는 않습니다. 실제 재배정은 <a href="#assignments">배정(19장)</a>에서 수동으로 합니다.</p></div>
+
+    <h2 id="emergency"><span class="num">⚑</span>응급 영상 보드 (ER 보드) <span class="badge b-rad">판독의</span> <span class="badge b-phy">임상의</span> <span class="badge b-tech">방사선사</span></h2>
+    <p><code>/emergency</code> — 응급실 환경을 위한 <b>읽기 전용 모니터 보드</b>입니다. 다크 테마 카드 보드로 STAT/긴급 검사를 한눈에 보고 즉시 뷰어로 엽니다(이 화면에서 판독문 작성은 하지 않습니다).</p>
+    <ul>
+      <li><b>헤더 카운트</b> — STAT 건수 · 판독 대기 · 전체</li>
+      <li><b>필터</b> — 전체 / STAT·긴급 / 판독 대기 / 판독 완료</li>
+      <li><b>카드 정보</b> — 상태(대기·작성중·예비·완료) 배지, STAT·긴급 태그(빨강·깜빡임), 환자·모달리티·검사명, <b>미판독 대기시간</b>(30분↑ 주황, 60분↑ 빨강·깜빡임), 배정 판독의, 뷰어 열기. 완료/예비 검사는 결론(impression)을 카드에 미리 보여줍니다.</li>
+      <li><b>자동 새로고침</b> — 15초 주기(+긴급 판독·신규 검사·SLA 위험 실시간 이벤트 시 갱신)</li>
+    </ul>
+    <div class="callout note"><b>참고</b><p>정렬 순서는 서버(보드 API) 기준이며, 화면은 STAT/긴급/대기시간을 색으로 강조합니다. 응급실 전용 계정(예: <code>er.doctor</code>)으로도 접근할 수 있습니다.</p></div>
+
+    <div class="part">PART 4 · 영상·검사</div>
+
+    <h2 id="worklist"><span class="num">22</span>워크리스트 <span class="badge b-tech">방사선사</span></h2>
+    <p>촬영 예약/진행 목록(Modality Worklist). HIS 오더와 동기화, 장비로 전송(MWL). 장비가 조회(MWL)하고 진행상태 보고(MPPS).</p>
+
+    <h2 id="technologist"><span class="num">23</span>방사선사 <span class="badge b-tech">방사선사</span></h2>
+    <p>방사선사 전용 워크스테이션. 대기·완료 카운트 현황판과 장비/수신 탭을 제공합니다. (업로드는 <b>업로드</b> 메뉴에서)</p>
+
+    <h2 id="upload"><span class="num">24</span>업로드 · 영상 수집 <span class="badge b-tech">방사선사</span> <span class="badge b-admin">관리자</span></h2>
+    <table>
+      <tr><th>경로</th><th>메뉴/주소</th><th>설명</th></tr>
+      <tr><td>관리자 업로드</td><td><b>업로드</b> <code>/upload</code></td><td>DICOM 파일/ZIP 직접 업로드</td></tr>
+      <tr><td>환자 포털</td><td><code>/patient-upload</code></td><td>토큰으로 환자 본인 업로드</td></tr>
+      <tr><td>키오스크</td><td><code>/kiosk</code></td><td>접수 데스크 터치 업로드</td></tr>
+      <tr><td>외부 PACS</td><td><b>외부연동</b> <code>/remotes</code></td><td>원격 PACS Query/Retrieve</td></tr>
+      <tr><td>DICOM 전송</td><td>DIMSE/DICOMweb</td><td>장비/타 시스템 직접 전송(C-STORE/STOW-RS)</td></tr>
+    </table>
+    <h3>승인 큐 <span class="badge b-admin">관리자</span></h3>
+    <p><code>/upload-queue</code> — 외부·환자 업로드 영상을 검토·승인해야 정식 저장. 환자 매칭·중복 확인 후 승인/반려.</p>
+
+    <h2 id="reception"><span class="num">25</span>수신 모니터 <span class="badge b-rad">판독의</span> <span class="badge b-tech">방사선사</span></h2>
+    <p><code>/reception</code> — 최근 수신 영상 목록(출처 AE·기관·모달리티·수신시각, 최신순). 각 검사에서 판독 보기로 바로 이동합니다.</p>
+    <p class="muted">※ 유입 경로별 분포·미판독 backlog 등 <b>집계·분석</b>은 경영BI(<a href="#bi">36장</a>)에서 제공합니다.</p>
+
+    <h2 id="remotes"><span class="num">26</span>외부 연동 (Q/R) <span class="badge b-admin">관리자</span></h2>
+    <ol class="steps">
+      <li>외부 PACS 노드 등록(AE Title·호스트·포트), 연결 확인(C-ECHO)</li>
+      <li>조건으로 원격 검색(C-FIND)</li>
+      <li>가져오기(C-MOVE) → 저장 (C-GET은 미지원)</li>
+    </ol>
+
+    <div class="part">PART 5 · 품질·정규화</div>
+
+    <h2 id="dicom-issues"><span class="num">27</span>DICOM 이슈 센터 <span class="badge b-admin">관리자</span></h2>
+    <p>비표준 DICOM 자동 검증·수정. 표준 미준수 영상은 <b>측정값 오류</b>로 이어질 수 있어 핵심 품질 관리입니다.</p>
+    <ul>
+      <li><b>검증 규칙</b> — 24규칙(15 자동수정). JPEG 밀도 vs Pixel Spacing 교차검증, UID/VR/Transfer Syntax 등</li>
+      <li><b>자동 수정·연쇄 수정</b> — 문제 태그+연관 태그 일괄 보정</li>
+      <li><b>원본 백업·롤백</b> — 수정 전 원본 바이트 보존(인스턴스당 64MB 한도), 잘못된 수정은 실제 원본 복원</li>
+      <li><b>미수정 플래그</b> — 자동수정 불가 이슈는 미수정 상태로 표시되어 사람이 검토</li>
+      <li><b>자동 검증</b> — 5분 주기 신규 영상 점검</li>
+      <li><b>설정</b> <code>/dicom-issues/settings</code> — 규칙 on/off, 모달리티 렌더, 메시지 편집</li>
+    </ul>
+
+    <h2 id="normalization"><span class="num">28</span>정규화 <span class="badge b-tech">방사선사</span></h2>
+    <ul>
+      <li><b>설정</b> — 정규화 알고리즘/규칙(관리자·방사선사)</li>
+      <li><b>배치</b> <code>/normalization/batches</code> — 일괄 정규화·진행률 실시간</li>
+      <li><b>검토</b> <code>/normalization/reviews</code> — 자동 수정 제안 검토·승인(메뉴에 대기 배지)</li>
+    </ul>
+
+    <h2 id="retake"><span class="num">29</span>재촬영 <span class="badge b-rad">판독의</span> <span class="badge b-phy">임상의</span></h2>
+    <p>품질 문제로 재촬영이 필요할 때(작업 흐름은 <a href="#wf-retake">10장</a>). 사유·범주·긴급도로 요청 → 승인/거부 → 일정 → 완료.</p>
+
+    <div class="part">PART 6 · AI·협진·환자</div>
+
+    <h2 id="ai"><span class="num">30</span>AI <span class="badge b-admin">관리자</span></h2>
+    <table>
+      <tr><th>화면</th><th>주소</th><th>설명</th></tr>
+      <tr><td>AI 대시보드</td><td><code>/ai</code></td><td>모델 현황·추론 통계</td></tr>
+      <tr><td>모델</td><td><code>/ai/models</code></td><td>모델 등록·활성/비활성 (임상/연구 구분은 모델 속성으로 대시보드에 표시)</td></tr>
+      <tr><td>추론</td><td><code>/ai/inferences</code></td><td>작업 큐·결과 모니터(필터·취소·다운로드)</td></tr>
+      <tr><td>오케스트레이션</td><td><code>/ai/orchestration</code></td><td>다단계 AI 파이프라인</td></tr>
+    </table>
+    <p class="muted">※ AI 결과 <b>수용/기각 피드백</b>은 뷰어/판독 화면의 <b>AI 패널</b>에서 입력합니다(거버넌스 수용률 집계에 반영). <code>/ai/inferences</code>는 모니터 전용입니다.</p>
+    <p><b>선제 스크리닝</b>: 신규 검사를 자동 분석, actionable 우연 소견 시 판독의에게 참고 알림.
+    <b>거버넌스</b>: 성능 추이·드리프트(7d vs 30d)·임상/연구 준수·수용률·자동 격리(기본 off).</p>
+    <div class="callout warn"><b>SaMD 면책</b><p>AI 결과는 참고용. 최종 판단은 판독의.</p></div>
+
+    <h2 id="consults"><span class="num">31</span>협진 · 세컨드오피니언 <span class="badge b-rad">판독의</span> <span class="badge b-admin">관리자</span></h2>
+    <ul>
+      <li><b>협진</b> <code>/consults</code> — 원내/외부 협진 요청·응답</li>
+      <li><b>세컨드오피니언</b> <code>/second-opinion</code> — 외부 전문의에게 토큰 공유·응답 회수</li>
+      <li><b>의뢰 포털</b> <code>/consult-portal</code> — 외부 전문의 토큰 접속(로그인 불필요)</li>
+    </ul>
+    <p class="muted">작업 흐름은 <a href="#wf-consult">11장</a> 참고.</p>
+
+    <h2 id="my-patients"><span class="num">32</span>내 환자 (임상의) <span class="badge b-phy">임상의</span></h2>
+    <ul>
+      <li>본인 의뢰 환자 목록(판독 상태·리포트 바로보기)</li>
+      <li>리포트 PDF, 영상 썸네일, 뷰어 열기</li>
+      <li>판독 완료 알림 수신</li>
+    </ul>
+    <div class="callout note"><b>접근 범위</b><p>임상의는 본인 의뢰분만 열람(판독의/관리자는 전체).</p></div>
+
+    <h2 id="portals"><span class="num">33</span>환자 포털 · 키오스크</h2>
+    <h3>환자 업로드 포털 <code>/patient-upload</code></h3>
+    <p>외부 촬영 영상을 환자가 1회용 토큰으로 직접 업로드 → 승인 큐 경유 저장.</p>
+    <h3>키오스크 <code>/kiosk</code></h3>
+    <p>접수 데스크 터치스크린. 환자 확인 후 CD/USB 업로드, 미사용 시 자동 초기화.</p>
+    <h3>환자 결과 추출 포털</h3>
+    <p>의료망 분리 외부 포털로 영상+최종 판독문을 암호 패키지·1회용 게이트웨이로 전달(기관 정책에 따라 활성화).</p>
+
+    <h2 id="esign"><span class="num">34</span>전자서명 <span class="badge b-rad">판독의</span> <span class="badge b-admin">관리자</span></h2>
+    <p>병원 공통 전자서명 서비스 연동, 판독보고서·동의서에 PKI 서명(CAdES/PAdES).</p>
+    <ul>
+      <li><b>판독보고서 서명</b> — 판독 보기에서 PDF 생성 후 전자서명, 보증 배지 표시</li>
+      <li><b>동의서</b> — 환자 본인·보호자(PROXY) 서명</li>
+    </ul>
+    <div class="callout tip"><b>보증 수준</b><p>키 보관 수준에 따라 <b>HSM 앵커</b> 또는 <b>소프트웨어</b> 배지가 자동 표시됩니다.</p></div>
+
+    <h2 id="xds"><span class="num">35</span>기관 간 교환 (XDS-I) <span class="badge b-rad">판독의</span></h2>
+    <p><code>/xds-export</code> — 기관 간 교환용 표준 패키지(IHE XDM) 생성. KOS+DICOM+표준 메타데이터(METADATA.XML)를 ZIP으로 내려받아 매체 전달.</p>
+
+    <div class="part">PART 7 · 운영·관리</div>
+
+    <h2 id="bi"><span class="num">36</span>경영/운영 BI <span class="badge b-rad">판독의</span> <span class="badge b-admin">관리자</span></h2>
+    <ul>
+      <li><b>판독 운영</b> — 완료율, 평균/P90 TAT, 모달리티별·판독의별 생산성</li>
+      <li><b>수신 검사량</b> — 유입 경로별, 미판독 backlog 가시화</li>
+      <li><b>월간 자동 리포트</b> — 매월 1일 생성·이력·관리자 알림</li>
+      <li><b>CSV 내보내기</b> — UTF-8(BOM)</li>
+    </ul>
+
+    <h2 id="archive"><span class="num">37</span>아카이브 <span class="badge b-rad">판독의</span> <span class="badge b-tech">방사선사</span></h2>
+    <p><code>/archive</code> — 장기 보존 검사 조회. 의료법 보존 기간(영상 5년 등)에 맞춘 보관·검색.
+    보존 기간이 지난 활성 검사는 <b>매월 자동 스캔되어 관리자 알림</b>으로 아카이브 후보가 안내됩니다(자동 삭제는 하지 않음).</p>
+
+    <h2 id="anonymize"><span class="num">38</span>익명화 · IRB <span class="badge b-res">연구자</span> <span class="badge b-admin">관리자</span></h2>
+    <ul>
+      <li><b>익명화</b> <code>/anonymize</code> — PHI 제거 연구용 사본 생성·다운로드(원본 보존, 사본만 반출)</li>
+      <li><b>IRB</b> <code>/irb</code> — 연구 승인 레지스트리(승인번호·기간·연구자 연결)</li>
+    </ul>
+    <div class="callout warn"><b>연구 데이터</b><p>익명화 영상도 개인정보보호 정책 적용. IRB 승인 범위 내에서만 사용.</p></div>
+
+    <h2 id="audit"><span class="num">39</span>감사 로그 <span class="badge b-admin">관리자</span></h2>
+    <p><code>/audit</code> — 로그인·열람·수정·반출·삭제·권한 사용 등 모든 주요 행위 추적(개인정보 통제·IHE ATNA). <b>사용자·행위·대상(리소스)·성공/실패·기간·키워드</b>로 검색하고, 결과를 <b>CSV(UTF-8 BOM)·JSON으로 내보내기</b> 할 수 있습니다. Break-the-Glass·PHI 접근 등 민감 이벤트가 기록됩니다.</p>
+
+    <h2 id="settings"><span class="num">40</span>설정 · 사용자 <span class="badge b-admin">관리자</span></h2>
+    <h3>설정 <code>/settings</code></h3>
+    <p>통합 설정 허브. SLA·정규화·DICOM이슈·외부연동·알림 등으로 이동.</p>
+    <div class="callout note"><b>시스템 자동 감시(관리자 알림)</b><p>다음 이상은 시스템이 자동 감지해 <b>알림센터</b>로 통지합니다 — <b>백업 이상</b>(실패·26시간 이상 미실행), <b>디스크 용량</b>(85%/95%), <b>서비스 다운·큐 적체 등 모니터링 경보</b>, <b>보존기간 만료 후보</b>(월간). 백업은 매일 자동 실행됩니다.</p></div>
+    <h3>사용자 <code>/users</code></h3>
+    <ul>
+      <li>계정 생성·역할 지정·비활성화</li>
+      <li>HIS SSO 시 최초 로그인 자동 프로비저닝(JIT)</li>
+    </ul>
+    <p class="muted">다기관 구성 시 <code>/tenants</code>에서 기관 관리(활성화 시).</p>
+
+    <div class="part">부록</div>
+
+    <h2 id="status">부록 A. 상태값 사전</h2>
+    <table>
+      <tr><th>영역</th><th>상태</th><th>의미</th></tr>
+      <tr><td>판독</td><td>미판독 / 진행(초안) / 완료(서명)</td><td>리포트 작성·서명 단계</td></tr>
+      <tr><td>재촬영</td><td>requested → approved/rejected → scheduled → completed</td><td>요청·승인·일정·완료</td></tr>
+      <tr><td>업로드 승인</td><td>대기 → 승인 / 반려</td><td>승인 큐 처리 상태</td></tr>
+      <tr><td>AI 추론</td><td>QUEUED → COMPLETED / FAILED</td><td>추론 작업 진행</td></tr>
+      <tr><td>긴급도</td><td>routine / urgent / stat</td><td>처리 우선순위</td></tr>
+      <tr><td>SLA</td><td>정상 / 경고 / 위험(에스컬레이션)</td><td>임계 대비 경과</td></tr>
+    </table>
+
+    <h2 id="shortcuts">부록 B. 단축키 (판독 보기)</h2>
+    <table>
+      <tr><th>키</th><th>동작</th></tr>
+      <tr><td><kbd>Q</kbd></td><td>판독 큐로 돌아가기</td></tr>
+      <tr><td><kbd>N</kbd></td><td>다음 미판독 Study로 이동 (이전 이동은 없음)</td></tr>
+      <tr><td><kbd>1</kbd>~<kbd>9</kbd></td><td>판독문에 1~9번 템플릿 삽입</td></tr>
+      <tr><td>뷰어 도구막대 / W·L 단축키 1~5</td><td>창조절·확대·이동·측정</td></tr>
+      <tr><td><kbd>P</kbd> (뷰어)</td><td>이전검사 비교 — 최신 이전 검사와 나란히 보기</td></tr>
+    </table>
+    <p class="muted">단축키는 버전/화면에 따라 다를 수 있습니다.</p>
+
+    <h2 id="security">부록 C. 보안 안내</h2>
+    <ul>
+      <li>전송 암호화(TLS)·저장 데이터 보호·역할 기반 접근 통제(RBAC)</li>
+      <li>비밀번호 12자 이상·복잡도, 로그인 실패 제한, 30분 유휴 자동 로그아웃</li>
+      <li>모든 민감 행위 감사 로그 기록 — 무단 열람 금지</li>
+      <li>외부 공유는 만료 토큰·동의 절차</li>
+      <li>개인정보보호법·의료법(영상 보존) 준수 설계</li>
+    </ul>
+    <div class="callout warn"><b>PHI 취급</b><p>환자 식별정보는 업무 범위에서만 접근. 화면 캡처·외부 전송은 기관 정책을 따르세요.</p></div>
+
+    <h2 id="faq">부록 D. FAQ · 문제 해결</h2>
+    <h4>Q. 메뉴가 안 보여요.</h4>
+    <p>A. 역할에 따라 필터링됩니다. 필요한 메뉴는 관리자에게 역할 부여를 요청하세요.</p>
+    <h4>Q. 뷰어에서 영상이 안 열려요.</h4>
+    <p>A. 새로고침 후 재시도. 비표준 영상은 <b>DICOM 이슈/정규화</b> 처리가 필요할 수 있습니다(13·27·28장).</p>
+    <h4>Q. 측정값이 이상해요.</h4>
+    <p>A. Pixel Spacing 비표준 가능성. <b>DICOM 이슈 센터</b>의 자동 검증/수정을 확인하세요.</p>
+    <h4>Q. AI 결과를 그대로 진단에 써도 되나요?</h4>
+    <p>A. 아니요. <b>참고용(진단 보조)</b>이며 최종 판단은 판독의입니다.</p>
+    <h4>Q. 로그인이 자꾸 풀려요.</h4>
+    <p>A. 30분 유휴 시 자동 로그아웃됩니다.</p>
+    <h4>Q. 외부 병원 영상을 가져오려면?</h4>
+    <p>A. <b>외부 연동(26장)</b> Q/R 또는 환자 포털/키오스크 업로드(12·33장).</p>
+    <h4>Q. 판독을 잘못 서명했어요.</h4>
+    <p>A. 추가 판독(정정 기록)으로 보완. 판독 책임자와 상의하세요.</p>
+    <h4>Q. 검사가 배정이 안 됐어요.</h4>
+    <p>A. <b>배정(19장)</b>에서 수동 배정하거나 자동 배정 규칙을 확인하세요.</p>
+
+    <footer>
+      <p><b>WeRU.B PACS</b> 사용 설명서 · 버전 v12.9 · 시스템 업데이트에 따라 변경될 수 있습니다.</p>
+      <p class="muted">기술 문의는 시스템 관리자에게, API 연동은 <a href="/pacs-api/docs" target="_blank">API 문서</a> 참고.</p>
+    </footer>
+  </main>
+</div>
+<a href="#" class="top" title="맨 위로">↑</a>
+<script>
+  function filterToc(q){
+    q=(q||'').trim().toLowerCase();
+    document.querySelectorAll('#tocnav a').forEach(function(a){
+      a.style.display = !q || a.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+    document.querySelectorAll('#tocnav .grp').forEach(function(g){ g.style.display = q ? 'none' : ''; });
+  }
+</script>
+</body>
+</html>

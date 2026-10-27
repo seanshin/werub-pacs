@@ -1,0 +1,797 @@
+diff --git a/extensions/cornerstone-dicom-sr/src/components/OHIFCornerstoneSRViewport.tsx b/extensions/cornerstone-dicom-sr/src/components/OHIFCornerstoneSRViewport.tsx
+index 3bbb73a..1800462 100644
+--- a/extensions/cornerstone-dicom-sr/src/components/OHIFCornerstoneSRViewport.tsx
++++ b/extensions/cornerstone-dicom-sr/src/components/OHIFCornerstoneSRViewport.tsx
+@@ -7,9 +7,16 @@ import OHIFCornerstoneSRTextViewport from './OHIFCornerstoneSRTextViewport';
+ 
+ function OHIFCornerstoneSRViewport(props: withAppTypes) {
+   const { displaySets } = props;
+-  const { isImagingMeasurementReport } = displaySets[0];
++  const { isImagingMeasurementReport, isRehydratable, measurements } = displaySets[0];
+ 
+-  if (isImagingMeasurementReport) {
++  // WeRU.B: The measurement viewport rehydrates SCOORD measurements onto images and
++  // throws when there is nothing to rehydrate. Categorical SRs (e.g. AI finding
++  // reports — TID 1500 but no spatial coordinates) have no rehydratable measurements,
++  // so route them to the text viewport, which renders the SR content as a document.
++  const hasRehydratableMeasurements =
++    isRehydratable && Array.isArray(measurements) && measurements.length > 0;
++
++  if (isImagingMeasurementReport && hasRehydratableMeasurements) {
+     return <OHIFCornerstoneSRMeasurementViewport {...props}></OHIFCornerstoneSRMeasurementViewport>;
+   }
+ 
+diff --git a/extensions/cornerstone-dicom-sr/src/getSopClassHandlerModule.ts b/extensions/cornerstone-dicom-sr/src/getSopClassHandlerModule.ts
+index dcec2f4..aa4a68c 100644
+--- a/extensions/cornerstone-dicom-sr/src/getSopClassHandlerModule.ts
++++ b/extensions/cornerstone-dicom-sr/src/getSopClassHandlerModule.ts
+@@ -295,6 +295,14 @@ function _checkIfCanAddMeasurementsToDisplaySet(
+       continue;
+     }
+ 
++    // WeRU.B: categorical SR measurements (e.g. AI findings — NUM/CODE with no
++    // SCOORD coordinates) have no coords to load onto an image. Skip them instead
++    // of dereferencing coords[0] (which threw 'Cannot read properties of undefined'
++    // → ErrorBoundary toast when viewing AI finding SRs).
++    if (!measurement.coords?.[0]) {
++      continue;
++    }
++
+     const referencedSOPSequence = measurement.coords[0].ReferencedSOPSequence;
+     if (!referencedSOPSequence) {
+       continue;
+diff --git a/extensions/cornerstone-dicom-sr/src/utils/formatContentItem.ts b/extensions/cornerstone-dicom-sr/src/utils/formatContentItem.ts
+index 064a8a2..26f1abe 100644
+--- a/extensions/cornerstone-dicom-sr/src/utils/formatContentItem.ts
++++ b/extensions/cornerstone-dicom-sr/src/utils/formatContentItem.ts
+@@ -28,6 +28,12 @@ const contentItemFormatters = {
+     const personName = contentItem.PersonName?.[0];
+     return personName ? utils.formatPN(personName) : undefined;
+   },
++  // WeRU.B: render the source/evidence image reference cleanly instead of
++  // "[IMAGE is not supported]" (the text viewport can't show the image inline).
++  IMAGE: contentItem => {
++    const ref = contentItem.ReferencedSOPSequence?.[0];
++    return ref ? '📷 근거영상' : '근거영상';
++  },
+   DATE: contentItem => {
+     const { Date } = contentItem;
+     return Date ? utils.formatDate(Date) : undefined;
+diff --git a/extensions/cornerstone/src/components/WindowLevelActionMenu/VolumeRenderingPresetsContent.tsx b/extensions/cornerstone/src/components/WindowLevelActionMenu/VolumeRenderingPresetsContent.tsx
+index 6a7ac0f..71bc54c 100644
+--- a/extensions/cornerstone/src/components/WindowLevelActionMenu/VolumeRenderingPresetsContent.tsx
++++ b/extensions/cornerstone/src/components/WindowLevelActionMenu/VolumeRenderingPresetsContent.tsx
+@@ -24,6 +24,14 @@ export function VolumeRenderingPresetsContent({ presets, viewportId, hide }: Pro
+       commandsManager.runCommand('setViewportPreset', {
+         ...props,
+       });
++      // WeRU.B: VR preset usage telemetry — werub-ai extension listens and reports (C2)
++      try {
++        document.dispatchEvent(
++          new CustomEvent('werub:vrt-preset-applied', { detail: { preset: props.preset } })
++        );
++      } catch {
++        /* telemetry must never break the viewer */
++      }
+     },
+     [commandsManager]
+   );
+@@ -65,7 +73,8 @@ export function VolumeRenderingPresetsContent({ presets, viewportId, hide }: Pro
+                 }
+               />
+               <label className="text-muted-foreground mt-1 text-left text-xs">
+-                {formatLabel(preset.name, 11)}
++                {/* WeRU.B: Korean label via i18n (WindowLevelActionMenu ns); preset.name stays the lookup key */}
++                {formatLabel(t(preset.name, { defaultValue: preset.name }), 16)}
+               </label>
+             </div>
+           ))}
+diff --git a/extensions/default/src/customizations/aboutModalCustomization.tsx b/extensions/default/src/customizations/aboutModalCustomization.tsx
+index 93a00e2..5517e3a 100644
+--- a/extensions/default/src/customizations/aboutModalCustomization.tsx
++++ b/extensions/default/src/customizations/aboutModalCustomization.tsx
+@@ -3,22 +3,30 @@ import { AboutModal } from '@ohif/ui-next';
+ import detect from 'browser-detect';
+ import { useTranslation } from 'react-i18next';
+ 
++const WERUB_VERSION = '10.1';
++const OHIF_VERSION = '3.12.0';
++const BUILD_DATE = '2026.06.05';
++
+ function AboutModalDefault() {
+   const { t } = useTranslation('AboutModal');
+   const { os, version, name } = detect();
+   const browser = `${name[0].toUpperCase()}${name.substr(1)} ${version}`;
+-  const versionNumber = process.env.VERSION_NUMBER;
+   const commitHash = process.env.COMMIT_HASH;
+ 
+-  const [main, beta] = versionNumber.split('-');
+-
+   return (
+     <AboutModal className="w-[400px]">
+-      <AboutModal.ProductName>OHIF Viewer</AboutModal.ProductName>
+-      <AboutModal.ProductVersion>{main}</AboutModal.ProductVersion>
+-      {beta && <AboutModal.ProductBeta>{beta}</AboutModal.ProductBeta>}
++      <AboutModal.ProductName>{t('About OHIF Viewer')}</AboutModal.ProductName>
++      <AboutModal.ProductVersion>{WERUB_VERSION}</AboutModal.ProductVersion>
+ 
+       <AboutModal.Body>
++        <AboutModal.DetailItem
++          label={t('Version number')}
++          value={`WeRU.B ${WERUB_VERSION} (OHIF ${OHIF_VERSION})`}
++        />
++        <AboutModal.DetailItem
++          label={t('Build Number')}
++          value={BUILD_DATE}
++        />
+         <AboutModal.DetailItem
+           label={t('Commit Hash')}
+           value={commitHash}
+@@ -27,10 +35,21 @@ function AboutModalDefault() {
+           label={t('Current Browser & OS')}
+           value={`${browser}, ${os}`}
+         />
+-        <AboutModal.SocialItem
+-          icon="SocialGithub"
+-          url="OHIF/Viewers"
+-          text="github.com/OHIF/Viewers"
++        <AboutModal.DetailItem
++          label="WeRU.B License"
++          value="Proprietary — Weruby"
++        />
++        <AboutModal.DetailItem
++          label="OHIF Viewer"
++          value="MIT License — Open Health Imaging Foundation"
++        />
++        <AboutModal.DetailItem
++          label="Cornerstone3D"
++          value="MIT License — Open Health Imaging Foundation"
++        />
++        <AboutModal.DetailItem
++          label="Orthanc"
++          value="GPLv3 — Sebastien Jodogne"
+         />
+       </AboutModal.Body>
+     </AboutModal>
+diff --git a/extensions/dicom-microscopy/src/DicomMicroscopyViewport.tsx b/extensions/dicom-microscopy/src/DicomMicroscopyViewport.tsx
+index 46bf0ff..22d8cb0 100644
+--- a/extensions/dicom-microscopy/src/DicomMicroscopyViewport.tsx
++++ b/extensions/dicom-microscopy/src/DicomMicroscopyViewport.tsx
+@@ -183,6 +183,25 @@ function DicomMicroscopyViewport({
+       if (displaySet.isOverlayDisplaySet && !displaySet.isLoaded && !displaySet.isLoading) {
+         displaySet.load(smDisplaySet);
+       }
++
++      // WeRU.B(G1 표시 복구): WSI(SM)를 열 때 같은 study의 ANN/SR 오버레이를 자동 로드.
++      // 원래는 오버레이가 displaySets[0]일 때만 load → 병리 주석이 뷰포트에 명시 추가돼야만 표시됐음.
++      if (!displaySet.isOverlayDisplaySet) {
++        const { displaySetService } = servicesManager.services;
++        (displaySetService.activeDisplaySets || [])
++          .filter(
++            ds =>
++              ds.isOverlayDisplaySet &&
++              ds.StudyInstanceUID === smDisplaySet.StudyInstanceUID &&
++              !ds.isLoaded &&
++              !ds.isLoading
++          )
++          .forEach(ds =>
++            Promise.resolve(ds.load(smDisplaySet)).catch(e =>
++              console.warn('overlay auto-load failed:', ds.SeriesInstanceUID, e)
++            )
++          );
++      }
+     },
+     [dataSource, extensionManager, microscopyService, servicesManager, viewportId]
+   );
+diff --git a/extensions/dicom-microscopy/src/components/MicroscopyPanel/MicroscopyPanel.tsx b/extensions/dicom-microscopy/src/components/MicroscopyPanel/MicroscopyPanel.tsx
+index ecb7949..17b0546 100644
+--- a/extensions/dicom-microscopy/src/components/MicroscopyPanel/MicroscopyPanel.tsx
++++ b/extensions/dicom-microscopy/src/components/MicroscopyPanel/MicroscopyPanel.tsx
+@@ -226,6 +226,103 @@ function MicroscopyPanel(props: IMicroscopyPanelProps) {
+     }
+   };
+ 
++  /**
++   * WeRU.B(G1): 드로잉한 ROI를 표준 DICOM ANN(Microscopy Bulk Simple Annotations, Sup222)으로 저장.
++   * 계산병리 AI 출력과 동일 형식 — 병리의 수기 마킹을 SCOORD3D(슬라이드 좌표)로 백엔드에 전송.
++   * 백엔드 POST /pacs-api/api/v1/pathology/{study}/annotations → highdicom ANN → Orthanc.
++   */
++  const [savingAnn, setSavingAnn] = useState(false);
++  // 저장 성공한 ROI uid — 반복 클릭이 같은 ROI를 새 ANN 시리즈로 중복 생성하지 않게
++  const savedRoiUids = React.useRef<Set<string>>(new Set());
++  const saveAsAnn = async () => {
++    const { uiNotificationService } = servicesManager.services;
++    const all = microscopyService.getAnnotationsForStudy(studyInstanceUID) || [];
++    const annotations = all.filter(roi => !savedRoiUids.current.has(roi.uid));
++    if (!annotations.length || savingAnn) {
++      uiNotificationService?.show({
++        title: '주석 저장',
++        message: all.length
++          ? '모든 주석이 이미 저장되었습니다. 새로 그린 주석만 저장됩니다.'
++          : '저장할 주석이 없습니다. 먼저 폴리곤/포인트를 그리세요.',
++        type: 'info',
++      });
++      return;
++    }
++    // 각 ROI = 하나의 주석 그룹(라벨 + geometry). scoord3d는 슬라이드 3D 좌표.
++    // 다중 슬라이드 study 대비: ROI가 그려진 시리즈별로 묶어 series_uid와 함께 전송
++    // (백엔드가 해당 SM 시리즈에 주석을 결합 — 임의 첫 슬라이드 결합 방지).
++    const bySeries = new Map();
++    for (const roi of annotations) {
++      const s = roi.roiGraphic && roi.roiGraphic.scoord3d;
++      if (!s || !s.graphicData || !s.graphicData.length) {
++        continue;
++      }
++      const graphicType = String(s.graphicType || 'POLYGON').toUpperCase();
++      // dmv Point.graphicData는 flat [x,y,z] — 나머지 타입은 [[x,y,z],...]
++      const points = graphicType === 'POINT' ? [s.graphicData] : s.graphicData;
++      const group = {
++        label: roi.label || roi.getDetailedLabel?.() || 'annotation',
++        graphic_type: graphicType,
++        algorithm_type: 'MANUAL',
++        coordinates: [points], // ROI 1개 = 주석 1개(점 배열의 리스트)
++      };
++      const seriesKey = roi.seriesInstanceUID || '';
++      if (!bySeries.has(seriesKey)) {
++        bySeries.set(seriesKey, []);
++      }
++      bySeries.get(seriesKey).push({ group, uid: roi.uid });
++    }
++    const totalGroups = [...bySeries.values()].reduce((n, g) => n + g.length, 0);
++    if (!totalGroups) {
++      uiNotificationService?.show({
++        title: '주석 저장', message: '유효한 좌표를 가진 주석이 없습니다.', type: 'warning',
++      });
++      return;
++    }
++    setSavingAnn(true);
++    try {
++      const token = localStorage.getItem('pacs_token');
++      let saved = 0;
++      for (const [seriesUID, items] of bySeries) {
++        const res = await fetch(
++          `${window.location.origin}/pacs-api/api/v1/pathology/${studyInstanceUID}/annotations`,
++          {
++            method: 'POST',
++            headers: {
++              'Content-Type': 'application/json',
++              ...(token ? { Authorization: `Bearer ${token}` } : {}),
++            },
++            body: JSON.stringify({
++              coordinate_type: '3D',
++              groups: items.map(it => it.group),
++              ...(seriesUID ? { series_uid: seriesUID } : {}),
++            }),
++          }
++        );
++        if (!res.ok) {
++          const txt = await res.text().catch(() => '');
++          throw new Error(`${res.status} ${txt.slice(0, 200)}`);
++        }
++        const out = await res.json();
++        saved += out.groups || 0;
++        items.forEach(it => it.uid && savedRoiUids.current.add(it.uid)); // 시리즈 단위 성공 시에만 마킹
++      }
++      uiNotificationService?.show({
++        title: 'DICOM 주석 저장됨',
++        message: `${saved}개 주석을 표준 ANN으로 저장했습니다. 스터디를 다시 열면 표시됩니다.`,
++        type: 'success',
++      });
++    } catch (error: any) {
++      uiNotificationService?.show({
++        title: '주석 저장 실패',
++        message: error?.message || String(error),
++        type: 'error',
++      });
++    } finally {
++      setSavingAnn(false);
++    }
++  };
++
+   /**
+    * On clicking "Reject annotations" button
+    */
+@@ -358,6 +455,17 @@ function MicroscopyPanel(props: IMicroscopyPanelProps) {
+           ))}
+         </div>
+       </div>
++      <div className="flex justify-center p-2">
++        <button
++          type="button"
++          disabled={savingAnn}
++          onClick={saveAsAnn}
++          data-cy="save-microscopy-ann"
++          className="text-primary-light border-primary-light hover:bg-primary-light hover:text-black rounded border px-3 py-2 text-base disabled:opacity-50"
++        >
++          {savingAnn ? '저장 중…' : 'DICOM 주석 저장(ANN)'}
++        </button>
++      </div>
+     </>
+   );
+ }
+diff --git a/extensions/dicom-microscopy/src/utils/loadAnnotation.js b/extensions/dicom-microscopy/src/utils/loadAnnotation.js
+index dcbc7a7..f7c40ab 100644
+--- a/extensions/dicom-microscopy/src/utils/loadAnnotation.js
++++ b/extensions/dicom-microscopy/src/utils/loadAnnotation.js
+@@ -86,8 +86,21 @@ export default function loadAnnotation({
+           displaySet.isLoaded = true;
+           displaySet.isLoading = false;
+           resolve(displaySet);
++        })
++        // WeRU.B: 메타 조회 실패 시 isLoading=true로 영구 고착(그 세션에서 재시도 불가)되던 것 —
++        // 상태 복구 + reject로 프로미스 정착
++        .catch(error => {
++          displaySet.isLoading = false;
++          console.error('Error retrieving annotation metadata:', error);
++          uiNotificationService.show({
++            title: 'Error loading annotations',
++            message: error?.message || String(error),
++            type: 'error',
++          });
++          reject(error);
+         });
+     } catch (error) {
++      displaySet.isLoading = false;
+       console.error('Error loading annotation:', error);
+       reject(error);
+     }
+diff --git a/modes/longitudinal/src/index.ts b/modes/longitudinal/src/index.ts
+index cb8b9a1..aabc40a 100644
+--- a/modes/longitudinal/src/index.ts
++++ b/modes/longitudinal/src/index.ts
+@@ -21,6 +21,8 @@ export const extensionDependencies = {
+   // Can derive the versions at least process.env.from npm_package_version
+   ...basicDependencies,
+   '@ohif/extension-measurement-tracking': '^3.0.0',
++  '@ohif/extension-werub-report': '^1.0.0',
++  '@ohif/extension-werub-ai': '^1.0.0',
+ };
+ 
+ export const longitudinalInstance = {
+@@ -29,7 +31,7 @@ export const longitudinalInstance = {
+   props: {
+     ...basicLayout.props,
+     leftPanels: [tracked.thumbnailList],
+-    rightPanels: [cornerstone.segmentation, tracked.measurements],
++    rightPanels: [cornerstone.segmentation, tracked.measurements, '@ohif/extension-werub-report.panelModule.reportPanel', '@ohif/extension-werub-ai.panelModule.aiPanel'],
+     viewports: [
+       {
+         namespace: tracked.viewport,
+@@ -52,17 +54,106 @@ export const longitudinalRoute =
+       layoutInstance: longitudinalInstance,
+     };
+ 
++// WeRU.B viewer-ux: prior 원클릭 비교 버튼 — 명령은 werub-ai getCommandsModule 제공
++const werubPriorCompareButton = {
++  id: 'werubPriorCompare',
++  uiType: 'ohif.toolButton',
++  props: {
++    icon: 'layout-side-by-side',
++    label: '이전검사',
++    tooltip: '이전 검사와 나란히 비교 (p)',
++    commands: 'werubComparePrior',
++    evaluate: 'evaluate.action',
++  },
++};
++
++// WeRU.B viewer-ux: Layout 버튼 뒤에 이전검사 버튼 삽입
++const werubToolbarSections = Object.fromEntries(
++  Object.entries(basicModeInstance.toolbarSections).map(([key, ids]) => {
++    if (Array.isArray(ids) && ids.includes('Layout')) {
++      const next = [...ids];
++      next.splice(next.indexOf('Layout') + 1, 0, 'werubPriorCompare');
++      return [key, next];
++    }
++    return [key, ids];
++  })
++);
++
++// WeRU.B: SM(WSI) 스터디가 기본 /viewer(longitudinal)로 열리면 이미지는 나오지만 microscopy 전용
++// UI(드로잉 도구·MicroscopyPanel·주석 저장)가 없다. 백엔드 뷰어 링크 20+곳이 /viewer로 생성되고
++// isValidMode도 SM을 배제하지 않아, 병리 스터디를 워크리스트/포털 링크로 열면 잘못된 모드로 열림.
++// → 단일 지점 해결: longitudinal 진입 시 SM 디스플레이셋을 감지하면 /microscopy로 리다이렉트.
++// (LIS 런처 viewer/launch는 이미 SM→microscopy 라우팅. 이건 그 외 모든 직접 링크를 커버.)
++function redirectSMToMicroscopy(servicesManager) {
++  try {
++    const { displaySetService } = servicesManager.services;
++    const tryRedirect = () => {
++      const hasSM = (displaySetService.getActiveDisplaySets() || []).some(
++        ds => ds && ds.Modality === 'SM'
++      );
++      if (!hasSM) return false;
++      const u = new URL(window.location.href);
++      if (/\/viewer\/?$/.test(u.pathname)) {
++        u.pathname = u.pathname.replace(/\/viewer\/?$/, '/microscopy');
++        window.location.replace(u.href);
++        return true;
++      }
++      return false;
++    };
++    if (tryRedirect()) {
++      return undefined;
++    }
++    const { unsubscribe } = displaySetService.subscribe(
++      displaySetService.EVENTS.DISPLAY_SETS_ADDED,
++      () => {
++        if (tryRedirect()) {
++          unsubscribe && unsubscribe();
++        }
++      }
++    );
++    return unsubscribe; // 미발동 구독은 onModeExit에서 해제(비-SM 진입 반복 시 누수 방지)
++  } catch (e) {
++    // 리다이렉트는 편의 기능 — 실패해도 기존 동작 유지
++    return undefined;
++  }
++}
++
++let _smRedirectUnsub;
++
+ export const modeInstance = {
+     ...basicModeInstance,
+     // TODO: We're using this as a route segment
+     // We should not be.
+     id,
+     routeName: 'viewer',
++    // ★basic onModeEnter는 this.toolbarButtons/this.toolbarSections를 등록 —
++    // basicModeInstance.onModeEnter(params)로 위임하면 this=basic이 되어 이 모드가
++    // 병합한 버튼(werubPriorCompare)이 소실됨(v13.24 회귀) → 반드시 .call(this, ...)
++    onModeEnter: function (params) {
++      basicModeInstance.onModeEnter && basicModeInstance.onModeEnter.call(this, params);
++      _smRedirectUnsub = redirectSMToMicroscopy(params.servicesManager);
++    },
++    onModeExit: function (params) {
++      if (_smRedirectUnsub) {
++        try {
++          _smRedirectUnsub();
++        } catch (e) {
++          /* no-op */
++        }
++        _smRedirectUnsub = undefined;
++      }
++      basicModeInstance.onModeExit && basicModeInstance.onModeExit.call(this, params);
++    },
+     displayName: i18n.t('Modes:Basic Viewer'),
+     routes: [
+       longitudinalRoute
+     ],
+     extensions: extensionDependencies,
++    // WeRU.B viewer-ux: 배열이면 HP 매칭 엔진이 동작(문자열은 직접 적용) —
++    // werubAutoMPR(재구성 가능 CT/MR→MPR 자동), 아니면 default(1×1) 폴백
++    hangingProtocol: ['werubAutoMPR', 'default'],
++    toolbarButtons: [...basicModeInstance.toolbarButtons, werubPriorCompareButton],
++    toolbarSections: werubToolbarSections,
+   };
+ 
+ const mode = {
+diff --git a/platform/app/pluginConfig.json b/platform/app/pluginConfig.json
+index fd56a74..2b55211 100644
+--- a/platform/app/pluginConfig.json
++++ b/platform/app/pluginConfig.json
+@@ -65,6 +65,14 @@
+     {
+       "packageName": "@ohif/extension-ultrasound-pleura-bline",
+       "version": "3.0.0"
++    },
++    {
++      "packageName": "@ohif/extension-werub-report",
++      "version": "1.0.0"
++    },
++    {
++      "packageName": "@ohif/extension-werub-ai",
++      "version": "1.0.0"
+     }
+   ],
+   "modes": [
+diff --git a/platform/app/src/routes/WorkList/WorkList.tsx b/platform/app/src/routes/WorkList/WorkList.tsx
+index 9c97426..e230992 100644
+--- a/platform/app/src/routes/WorkList/WorkList.tsx
++++ b/platform/app/src/routes/WorkList/WorkList.tsx
+@@ -127,6 +127,32 @@ function WorkList({
+     });
+   }, [canSort, studies, shouldUseDefaultSort, sortBy, sortModifier]);
+ 
++  // ~ WeRU.B: Report status for each study
++  const [reportStatusMap, setReportStatusMap] = useState<Record<string, string>>({});
++
++  useEffect(() => {
++    // Fetch report statuses via batch API
++    const fetchReportStatuses = async () => {
++      if (!sortedStudies || sortedStudies.length === 0) return;
++      const uids = sortedStudies.map(s => s.studyInstanceUid).filter(Boolean);
++      if (uids.length === 0) return;
++
++      try {
++        const token = localStorage.getItem('pacs_token');
++        const resp = await fetch(`/pacs-api/api/v1/reports/status-batch?study_uids=${uids.join(',')}`, {
++          headers: token ? { 'Authorization': `Bearer ${token}` } : {},
++        });
++        if (resp.ok) {
++          const data = await resp.json();
++          if (data.status_map) setReportStatusMap(data.status_map);
++        }
++      } catch {
++        // Non-critical — silently fail
++      }
++    };
++    fetchReportStatuses();
++  }, [sortedStudies]);
++
+   // ~ Rows & Studies
+   const [expandedRows, setExpandedRows] = useState([]);
+   const [studiesWithSeriesData, setStudiesWithSeriesData] = useState([]);
+@@ -267,12 +293,12 @@ function WorkList({
+     const studyDate =
+       date &&
+       moment(date, ['YYYYMMDD', 'YYYY.MM.DD'], true).isValid() &&
+-      moment(date, ['YYYYMMDD', 'YYYY.MM.DD']).format(t('Common:localDateFormat', 'MMM-DD-YYYY'));
++      moment(date, ['YYYYMMDD', 'YYYY.MM.DD']).format(t('Common:localDateFormat', 'YYYY-MM-DD'));
+     const studyTime =
+       time &&
+       moment(time, ['HH', 'HHmm', 'HHmmss', 'HHmmss.SSS']).isValid() &&
+       moment(time, ['HH', 'HHmm', 'HHmmss', 'HHmmss.SSS']).format(
+-        t('Common:localTimeFormat', 'hh:mm A')
++        t('Common:localTimeFormat', 'HH:mm')
+       );
+ 
+     const makeCopyTooltipCell = textValue => {
+@@ -328,12 +354,12 @@ function WorkList({
+           key: 'modality',
+           content: modalities,
+           title: modalities,
+-          gridCol: 3,
++          gridCol: 2,
+         },
+         {
+           key: 'accession',
+           content: makeCopyTooltipCell(accession),
+-          gridCol: 3,
++          gridCol: 2,
+         },
+         {
+           key: 'instances',
+@@ -351,6 +377,18 @@ function WorkList({
+           title: (instances || 0).toString(),
+           gridCol: 2,
+         },
++        {
++          // WeRU.B: Report status badge
++          key: 'reportStatus',
++          content: (() => {
++            const st = reportStatusMap[studyInstanceUid];
++            if (!st) return <span className="text-secondary-light text-xs">미판독</span>;
++            if (st === 'final') return <span className="rounded bg-green-700/30 px-1.5 py-0.5 text-xs font-semibold text-green-400">완료</span>;
++            if (st === 'draft') return <span className="rounded bg-yellow-700/30 px-1.5 py-0.5 text-xs font-semibold text-yellow-400">작성중</span>;
++            return <span className="rounded bg-blue-700/30 px-1.5 py-0.5 text-xs font-semibold text-blue-400">{st}</span>;
++          })(),
++          gridCol: 2,
++        },
+       ],
+       // Todo: This is actually running for all rows, even if they are
+       // not clicked on.
+diff --git a/platform/app/src/routes/WorkList/filtersMeta.js b/platform/app/src/routes/WorkList/filtersMeta.js
+index 7057c8b..be177a8 100644
+--- a/platform/app/src/routes/WorkList/filtersMeta.js
++++ b/platform/app/src/routes/WorkList/filtersMeta.js
+@@ -1,5 +1,8 @@
+ import i18n from 'i18next';
+ 
++// WeRU.B: Optimized for Korean clinical workflow
++// Total gridCol = 4+3+5+4+2+2+2+2 = 24
++// Prioritize: patientName, studyDate, description
+ const filtersMeta = [
+   {
+     name: 'patientName',
+@@ -35,87 +38,48 @@ const filtersMeta = [
+     inputType: 'MultiSelect',
+     inputProps: {
+       options: [
++        // Common Korean clinic modalities first
++        { value: 'CR', label: 'CR' },
++        { value: 'CT', label: 'CT' },
++        { value: 'DX', label: 'DX' },
++        { value: 'MG', label: 'MG' },
++        { value: 'MR', label: 'MR' },
++        { value: 'NM', label: 'NM' },
++        { value: 'PT', label: 'PT' },
++        { value: 'RF', label: 'RF' },
++        { value: 'US', label: 'US' },
++        { value: 'XA', label: 'XA' },
++        // Less common
+         { value: 'AR', label: 'AR' },
+-        { value: 'ASMT', label: 'ASMT' },
+         { value: 'AU', label: 'AU' },
+-        { value: 'BDUS', label: 'BDUS' },
+         { value: 'BI', label: 'BI' },
+         { value: 'BMD', label: 'BMD' },
+-        { value: 'CR', label: 'CR' },
+-        { value: 'CT', label: 'CT' },
+-        { value: 'CTPROTOCOL', label: 'CTPROTOCOL' },
+-        { value: 'DG', label: 'DG' },
+         { value: 'DOC', label: 'DOC' },
+-        { value: 'DX', label: 'DX' },
+         { value: 'ECG', label: 'ECG' },
+-        { value: 'EPS', label: 'EPS' },
+         { value: 'ES', label: 'ES' },
+-        { value: 'FID', label: 'FID' },
+-        { value: 'GM', label: 'GM' },
+-        { value: 'HC', label: 'HC' },
+-        { value: 'HD', label: 'HD' },
+         { value: 'IO', label: 'IO' },
+-        { value: 'IOL', label: 'IOL' },
+-        { value: 'IVOCT', label: 'IVOCT' },
+-        { value: 'IVUS', label: 'IVUS' },
+-        { value: 'KER', label: 'KER' },
+         { value: 'KO', label: 'KO' },
+-        { value: 'LEN', label: 'LEN' },
+-        { value: 'LS', label: 'LS' },
+-        { value: 'MG', label: 'MG' },
+-        { value: 'MR', label: 'MR' },
+-        { value: 'M3D', label: 'M3D' },
+-        { value: 'NM', label: 'NM' },
+-        { value: 'OAM', label: 'OAM' },
+-        { value: 'OCT', label: 'OCT' },
+-        { value: 'OP', label: 'OP' },
+-        { value: 'OPM', label: 'OPM' },
+-        { value: 'OPT', label: 'OPT' },
+-        { value: 'OPTBSV', label: 'OPTBSV' },
+-        { value: 'OPTENF', label: 'OPTENF' },
+-        { value: 'OPV', label: 'OPV' },
+-        { value: 'OSS', label: 'OSS' },
+         { value: 'OT', label: 'OT' },
+-        { value: 'PLAN', label: 'PLAN' },
+         { value: 'PR', label: 'PR' },
+-        { value: 'PT', label: 'PT' },
+-        { value: 'PX', label: 'PX' },
+-        { value: 'REG', label: 'REG' },
+-        { value: 'RESP', label: 'RESP' },
+-        { value: 'RF', label: 'RF' },
+-        { value: 'RG', label: 'RG' },
+         { value: 'RTDOSE', label: 'RTDOSE' },
+         { value: 'RTIMAGE', label: 'RTIMAGE' },
+-        { value: 'RTINTENT', label: 'RTINTENT' },
+         { value: 'RTPLAN', label: 'RTPLAN' },
+-        { value: 'RTRAD', label: 'RTRAD' },
+-        { value: 'RTRECORD', label: 'RTRECORD' },
+-        { value: 'RTSEGANN', label: 'RTSEGANN' },
+         { value: 'RTSTRUCT', label: 'RTSTRUCT' },
+-        { value: 'RWV', label: 'RWV' },
++        { value: 'SC', label: 'SC' },
+         { value: 'SEG', label: 'SEG' },
+         { value: 'SM', label: 'SM' },
+-        { value: 'SMR', label: 'SMR' },
+         { value: 'SR', label: 'SR' },
+-        { value: 'SRF', label: 'SRF' },
+-        { value: 'STAIN', label: 'STAIN' },
+-        { value: 'TEXTUREMAP', label: 'TEXTUREMAP' },
+-        { value: 'TG', label: 'TG' },
+-        { value: 'US', label: 'US' },
+-        { value: 'VA', label: 'VA' },
+-        { value: 'XA', label: 'XA' },
+-        { value: 'XC', label: 'XC' },
+       ],
+     },
+     isSortable: true,
+-    gridCol: 3,
++    gridCol: 2,
+   },
+   {
+     name: 'accession',
+     displayName: i18n.t('StudyList:AccessionNumber'),
+     inputType: 'Text',
+     isSortable: true,
+-    gridCol: 3,
++    gridCol: 2,
+   },
+   {
+     name: 'instances',
+@@ -124,6 +88,14 @@ const filtersMeta = [
+     isSortable: false,
+     gridCol: 2,
+   },
++  {
++    // WeRU.B: Reading report status column
++    name: 'reportStatus',
++    displayName: '판독',
++    inputType: 'None',
++    isSortable: false,
++    gridCol: 2,
++  },
+ ];
+ 
+ export default filtersMeta;
+diff --git a/platform/core/src/services/UserAuthenticationService/UserAuthenticationService.ts b/platform/core/src/services/UserAuthenticationService/UserAuthenticationService.ts
+index 6ae3c8e..c89d54f 100644
+--- a/platform/core/src/services/UserAuthenticationService/UserAuthenticationService.ts
++++ b/platform/core/src/services/UserAuthenticationService/UserAuthenticationService.ts
+@@ -15,7 +15,16 @@ class UserAuthenticationService extends PubSubService {
+     _getState: () => console.warn('getState() NOT IMPLEMENTED'),
+     _setUser: () => console.warn('_setUser() NOT IMPLEMENTED'),
+     _getUser: () => console.warn('_getUser() NOT IMPLEMENTED'),
+-    _getAuthorizationHeader: () => {}, // TODO: Implement this method
++    // WeRU.B: DICOMweb(QIDO/WADO) 요청에 pacs_token 첨부 → nginx auth_request 게이트(P1).
++    // dataSource와 WADO 이미지로더가 모두 이 값을 요청 헤더에 주입한다.
++    _getAuthorizationHeader: () => {
++      try {
++        const t = typeof localStorage !== 'undefined' ? localStorage.getItem('pacs_token') : null;
++        return t ? { Authorization: 'Bearer ' + t } : {};
++      } catch (e) {
++        return {};
++      }
++    },
+     _handleUnauthenticated: () => console.warn('_handleUnauthenticated() NOT IMPLEMENTED'),
+     _reset: () => console.warn('reset() NOT IMPLEMENTED'),
+     _set: () => console.warn('set() NOT IMPLEMENTED'),
+diff --git a/platform/core/src/utils/formatDate.js b/platform/core/src/utils/formatDate.js
+index 7593175..adba497 100644
+--- a/platform/core/src/utils/formatDate.js
++++ b/platform/core/src/utils/formatDate.js
+@@ -8,7 +8,7 @@ import i18n from 'i18next';
+  * @param {string} format Desired date format
+  * @returns {string} Formatted date
+  */
+-export default (date, format = i18n.t('Common:localDateFormat', 'DD-MMM-YYYY')) => {
++export default (date, format = i18n.t('Common:localDateFormat', 'YYYY-MM-DD')) => {
+   if (!date) {
+     return '';
+   }
+diff --git a/platform/core/src/utils/formatPN.js b/platform/core/src/utils/formatPN.js
+index 0427004..7735d2b 100644
+--- a/platform/core/src/utils/formatPN.js
++++ b/platform/core/src/utils/formatPN.js
+@@ -1,23 +1,34 @@
+ /**
+- * Formats a patient name for display purposes
++ * Formats a patient name for display purposes.
++ *
++ * WeRU.B: Korean-aware formatting.
++ * DICOM PN: FamilyName^GivenName^MiddleName^Prefix^Suffix
++ *
++ * Korean names (contains Hangul): "홍^길동" → "홍길동" (no separator)
++ * Western names: "Smith^John" → "Smith, John" (comma separator)
++ * Already plain text: returned as-is
+  */
+ export default function formatPN(name) {
+   if (!name) {
+     return;
+   }
+ 
+-  let nameToUse = name.Alphabetic ?? name;
++  // Handle DICOM PersonName object (may have Alphabetic, Ideographic, Phonetic)
++  let nameToUse = name.Ideographic || name.Alphabetic || name;
+   if (typeof nameToUse === 'object') {
+     nameToUse = '';
+   }
+ 
+-  // Convert the first ^ to a ', '. String.replace() only affects
+-  // the first appearance of the character.
+-  const commaBetweenFirstAndLast = nameToUse.replace('^', ', ');
++  // Detect Korean characters (Hangul)
++  const hasKorean = /[\uAC00-\uD7AF\u3130-\u318F]/.test(nameToUse);
+ 
+-  // Replace any remaining '^' characters with spaces
+-  const cleaned = commaBetweenFirstAndLast.replace(/\^/g, ' ');
++  if (hasKorean) {
++    // Korean: remove all ^ separators (성이름 붙여쓰기)
++    return nameToUse.replace(/\^/g, '').trim();
++  }
+ 
+-  // Trim any extraneous whitespace
++  // Western: "Last^First^Middle" → "Last, First Middle"
++  const commaBetweenFirstAndLast = nameToUse.replace('^', ', ');
++  const cleaned = commaBetweenFirstAndLast.replace(/\^/g, ' ');
+   return cleaned.trim();
+ }
+diff --git a/platform/ui-next/src/components/Errorboundary/ErrorBoundary.tsx b/platform/ui-next/src/components/Errorboundary/ErrorBoundary.tsx
+index 78b689c..54c1440 100644
+--- a/platform/ui-next/src/components/Errorboundary/ErrorBoundary.tsx
++++ b/platform/ui-next/src/components/Errorboundary/ErrorBoundary.tsx
+@@ -152,7 +152,7 @@ const DefaultFallback = ({
+   const [showDetails, setShowDetails] = useState(false);
+   const { show } = useNotification();
+ 
+-  const title = `${t('Something went wrong')}${!isProduction && ` ${t('in')} ${context}`}.`;
++  const title = `${t('Something went wrong')}${!isProduction ? ` ${t('in')} ${context}` : ''}.`;
+   const subtitle = t('Sorry, something went wrong there. Try again.');
+ 
+   const { errorTitle, code, firstFilename } = parseErrorStack(error);

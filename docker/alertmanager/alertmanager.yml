@@ -1,0 +1,22 @@
+# OpenPACS alertmanager (pacs-fundamentals 2축)
+# 수신자: backend webhook → admin 알림센터(notifications).
+# 설치 시 <WEBHOOK_TOKEN>을 backend env ALERTMANAGER_WEBHOOK_TOKEN과 동일 값으로 교체
+# (gen-secrets 참고). backend-down 커버가 필요하면 SMTP 확보 후 email_configs 추가.
+route:
+  receiver: openpacs-backend
+  group_by: ['alertname']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 12h
+
+receivers:
+  - name: openpacs-backend
+    webhook_configs:
+      # 토큰은 Authorization 헤더로 — URL 쿼리는 access-log에 평문 잔류.
+      # <WEBHOOK_TOKEN>을 backend env ALERTMANAGER_WEBHOOK_TOKEN 값으로 치환.
+      - url: 'http://backend:8000/api/v1/monitoring/alerts-webhook'
+        send_resolved: true
+        http_config:
+          authorization:
+            type: Bearer
+            credentials: '<WEBHOOK_TOKEN>'

@@ -1,0 +1,21 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'fastapi'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['127.0.0.1:8000']
+
+  - job_name: 'orthanc'
+    metrics_path: '/tools/metrics-prometheus'
+    # NOTE: Update password when Orthanc credentials change
+    basic_auth:
+      username: 'admin'
+      password_file: '/etc/prometheus/orthanc_password'
+    static_configs:
+      - targets: ['127.0.0.1:8042']
+
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['127.0.0.1:9100']

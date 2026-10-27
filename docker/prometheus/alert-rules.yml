@@ -1,0 +1,63 @@
+# OpenPACS Prometheus 알림 규칙 (pacs-fundamentals 2축)
+# 발화 → alertmanager → backend /api/v1/monitoring/alerts-webhook → admin 알림센터.
+# backend 자체 다운은 이 경로로 전달 불가 — SMTP 확보 시 alertmanager email receiver 추가.
+groups:
+  - name: openpacs
+    rules:
+      - alert: ServiceDown
+        expr: up == 0
+        for: 3m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.job }} 메트릭 수집 불가 (3분 이상) — 서비스 다운 가능성"
+
+      - alert: HostDiskHigh
+        expr: pacs_host_disk_used_pct > 85
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "호스트 디스크 사용률 {{ $value }}% (>85%)"
+
+      - alert: HostDiskCritical
+        expr: pacs_host_disk_used_pct > 95
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "호스트 디스크 사용률 {{ $value }}% (>95%) — 즉시 조치 필요"
+
+      - alert: CeleryQueueBacklog
+        expr: pacs_celery_queue_length{queue!="celery"} > 100
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Celery {{ $labels.queue }} 큐 적체 {{ $value }}건 (15분 이상)"
+
+      # v11.5 교훈: 미라우팅 태스크는 아무도 소비하지 않는 "celery" 기본 큐에 쌓인다
+      # (auto_validate 1,652건 적체 전례) — 0이 아니면 라우팅 누락.
+      - alert: UnroutedCeleryTasks
+        expr: pacs_celery_queue_length{queue="celery"} > 0
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "미라우팅 celery 기본 큐에 {{ $value }}건 — task_routes 누락 의심"
+
+      - alert: High5xxRate
+        expr: sum(rate(http_requests_total{status="5xx"}[5m])) > 0.2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "backend 5xx 비율 상승 ({{ $value }}건/초, 5분 지속)"
+
+      - alert: ValidationFailureSpike
+        expr: pacs_validation_failures_24h{severity="CRITICAL"} > 50
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "24시간 CRITICAL 검증 실패 {{ $value }}건 — 수신 소스 점검 필요"

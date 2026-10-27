@@ -1,0 +1,69 @@
+# bkit
+.bkit/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Docker volumes
+docker/postgres/data/
+docker/orthanc/data/
+docker/grafana/data/
+docker/prometheus/data/
+docker/keycloak/data/
+docker/redis/data/
+
+# TLS certs (self-signed for dev)
+docker/nginx/certs/*.pem
+docker/nginx/certs/*.key
+docker/nginx/certs/*.crt
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Load test results & venv
+tests/load/results/
+tests/load/.venv/
+
+# Node (for OHIF viewer build)
+node_modules/
+dist/
+dist.bak/
+werub-viewer/.ohif-src/
+
+# Next.js admin
+admin/.next/
+admin/node_modules/
+*.tsbuildinfo
+
+# Deprecated / build backups
+*.deprecated
+
+# Agent memory (local, per-session)
+.claude/agent-memory/
+**/.claude/agent-memory/
+.claude/scheduled_tasks.lock
+
+# PDCA snapshots (auto-generated, local churn)
+docs/.pdca-snapshots/
+
+# Test artifacts
+backend/test-results/
+
+# DICOM TLS 인증서/키(민감) — 커밋 금지
+docker/orthanc/tls/*.pem
+docker/orthanc/tls/*.srl

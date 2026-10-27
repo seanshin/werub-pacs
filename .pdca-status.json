@@ -1,0 +1,10 @@
+{
+  "api": {
+    "phase": "archived",
+    "matchRate": 92,
+    "iterationCount": 1,
+    "startedAt": "2026-05-13T00:00:00Z",
+    "archivedAt": "2026-05-13T12:00:00Z",
+    "archivedTo": "docs/archive/2026-05/api/"
+  }
+}

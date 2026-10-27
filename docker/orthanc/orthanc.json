@@ -1,0 +1,87 @@
+{
+  "Name": "OpenPACS",
+  "RemoteAccessAllowed": true,
+  "AuthenticationEnabled": true,
+  "RegisteredUsers": {
+    "admin": "changeme_orthanc_2026"
+  },
+
+  "DicomAet": "OPENPACS",
+  "DicomPort": 4242,
+  "HttpPort": 8042,
+
+  "// DICOM TLS": "설치 제품 옵션 하드닝 — 모달리티망 C-STORE/FIND/MOVE 암호화. 기본 비활성(비TLS 모달리티 호환).",
+  "// 활성화": ".env ORTHANC_DICOM_TLS_ENABLED=true (compose가 ORTHANC__DICOM_TLS_ENABLED로 오버라이드) + scripts/install/gen-dicom-tls.sh 로 인증서 생성.",
+  "DicomTlsEnabled": false,
+  "DicomTlsCertificate": "/etc/orthanc/tls/server-cert.pem",
+  "DicomTlsPrivateKey": "/etc/orthanc/tls/server-key.pem",
+  "DicomTlsTrustedCertificates": "/etc/orthanc/tls/ca-cert.pem",
+  "DicomTlsRemoteCertificateRequired": false,
+
+  "DefaultEncoding": "Utf8",
+  "DicomScuPreferredTransferSyntax": "1.2.840.10008.1.2.1",
+
+  "StableAge": 10,
+
+  "StorageCompression": false,
+  "MaximumStorageSize": 0,
+  "MaximumPatientCount": 0,
+
+  "DicomModalities": {},
+  "OrthancPeers": {},
+
+  "HttpsCACertificates": "/etc/ssl/certs/ca-certificates.crt",
+
+  "DicomWeb": {
+    "Enable": true,
+    "Root": "/dicom-web/",
+    "EnableWado": true,
+    "WadoRoot": "/wado",
+    "Host": "0.0.0.0",
+    "Ssl": false,
+    "StowMaxInstances": 10,
+    "StowMaxSize": 104857600,
+    "MetadataWorkerThreadsCount": 4
+  },
+
+  "PostgreSQL": {
+    "EnableIndex": true,
+    "EnableStorage": false,
+    "Port": 5432,
+    "Host": "postgres",
+    "Database": "openpacs",
+    "Username": "openpacs",
+    "Password": "changeme_postgres_2026",
+    "EnableSsl": false,
+    "Lock": false
+  },
+
+  "Plugins": [
+    "/usr/share/orthanc/plugins/"
+  ],
+
+  "KeepAlive": true,
+  "TcpNoDelay": true,
+  "HttpThreadsCount": 8,
+  "DicomThreadsCount": 4,
+
+  "Locale": "en_US.UTF-8",
+
+  "UserMetadata": {},
+
+  "IngestTranscoding": "1.2.840.10008.1.2.1",
+
+  "OverwriteInstances": false,
+
+  "DicomAlwaysAllowEcho": true,
+  "DicomAlwaysAllowFind": false,
+  "DicomAlwaysAllowFindWorklist": false,
+  "DicomAlwaysAllowGet": false,
+  "DicomAlwaysAllowMove": false,
+  "DicomAlwaysAllowStore": false,
+  "DicomCheckCalledAet": false,
+
+  "SynchronousZipStream": true,
+
+  "JobsHistorySize": 100
+}
