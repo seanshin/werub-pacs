@@ -35,7 +35,7 @@
 | API 엔드포인트 | **340+** |
 | 인허가 문서 | **25종** |
 | 릴리스 태그 | v1.0.0 ~ **v9.5** |
-| Git 저장소 | https://github.com/seanshin/openpacs |
+| Git 저장소 | https://github.com/seanshin/werub-pacs |
 
 ### 2.2 소프트웨어 안전 등급 (IEC 62304)
 

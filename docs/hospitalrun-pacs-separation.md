@@ -3,7 +3,7 @@
 ### 변경 사항
 PACS(Orthanc + OHIF Viewer + FastAPI 백엔드) 관련 코드와 설정이 **별도 프로젝트로 분리**되었습니다.
 
-- **새 저장소**: https://github.com/seanshin/openpacs
+- **새 저장소**: https://github.com/seanshin/werub-pacs
 - **서버 코드**: `/home/deploy/openpacs/backend/`
 - **담당 CLI**: openpacs 프로젝트에서 별도 관리
 
@@ -43,4 +43,4 @@ PACS(Orthanc + OHIF Viewer + FastAPI 백엔드) 관련 코드와 설정이 **별
 | 8042 | Orthanc HTTP | **OpenPACS** |
 
 ### 문의
-PACS 관련 이슈는 https://github.com/seanshin/openpacs 에서 관리합니다.
+PACS 관련 이슈는 https://github.com/seanshin/werub-pacs 에서 관리합니다.

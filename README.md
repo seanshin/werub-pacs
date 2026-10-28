@@ -177,7 +177,7 @@
 
 ```bash
 # Clone the repository
-git clone https://github.com/seanshin/openpacs.git
+git clone https://github.com/seanshin/werub-pacs.git
 cd openpacs
 
 # Copy environment file and configure
@@ -596,7 +596,7 @@ We welcome contributions to improve WeRU.B PACS. Please follow these guidelines:
 
 For major changes, please open an issue first to discuss the proposed changes.
 
-**Contact**: Weruby -- [GitHub Issues](https://github.com/seanshin/openpacs/issues)
+**Contact**: Weruby -- [GitHub Issues](https://github.com/seanshin/werub-pacs/issues)
 
 ---
 
